@@ -1,0 +1,224 @@
+---
+title: "Arquivos de entrada e saída"
+keywords: ["arquivo enriquecimento", "csv", "xlsx", "xls", "arquivo de entrada", "arquivo de saída", "lazy data"]
+description: "Entenda formatos aceitos, estrutura esperada e arquivos gerados no enriquecimento."
+sidebarTitle: "Arquivos de entrada e saída"
+---
+
+O enriquecimento usa um arquivo como base de entrada e pode gerar arquivos de saída ao final do processamento.
+
+A Lazy Data analisa o arquivo enviado para identificar estrutura, detectar a coluna de CPF ou CNPJ e preparar os registros que serão enriquecidos.
+
+<Card title="Upload para enriquecimento" icon="cloud-arrow-up" horizontal href="/api-reference/upload/enrichment">
+  Veja como enviar o arquivo pelo serviço `upload.lazydata.com.br`.
+</Card>
+
+## Formatos aceitos
+
+| Extensão | Uso |
+| --- | --- |
+| `csv` | Recomendado para bases grandes e integrações automatizadas. |
+| `xls` | Planilhas legadas do Excel. |
+| `xlsx` | Planilhas modernas do Excel. |
+
+O arquivo deve conter ao menos uma coluna com CPF ou CNPJ, conforme o tipo de enriquecimento escolhido.
+
+## Limite de tamanho
+
+O upload de enriquecimento aceita arquivos de até `1024 MB`.
+
+Arquivos acima desse limite são recusados antes do processamento.
+
+## Arquivo de entrada
+
+O arquivo de entrada contém os registros que serão enriquecidos.
+
+Exemplo com cabeçalho:
+
+```csv
+cpf,nome,nascimento
+60235209872,BENITO JUAREZ DE OLIVEIRA,1980-05-10
+05491816876,ANTONIO SERGIO SILVESTRE,1978-09-22
+36114391853,PEDRO ROCHA DE CARVALHO,1992-01-15
+```
+
+Exemplo sem cabeçalho:
+
+```csv
+60235209872,BENITO JUAREZ DE OLIVEIRA,1980-05-10
+05491816876,ANTONIO SERGIO SILVESTRE,1978-09-22
+36114391853,PEDRO ROCHA DE CARVALHO,1992-01-15
+```
+
+Quando o arquivo não possui cabeçalho, a análise pode exibir colunas por índice ou nomes genéricos. Use as amostras retornadas em `analysis.columns[]` para escolher a coluna correta.
+
+## Detecção automática
+
+Durante a análise do arquivo, a Lazy Data tenta identificar:
+
+- formato do arquivo;
+- delimitador, quando aplicável;
+- existência de cabeçalho;
+- total de linhas;
+- colunas disponíveis;
+- coluna provável de CPF ou CNPJ;
+- amostras das primeiras linhas.
+
+Mesmo quando a coluna do documento for detectada automaticamente, revise a sugestão antes de iniciar o processamento.
+
+```json
+{
+  "analysis": {
+    "has_header": true,
+    "document_column": 0,
+    "document_column_name": "cpf",
+    "confidence": 0.98,
+    "columns": [
+      {
+        "index": 0,
+        "name": "cpf",
+        "sample": "60235209872"
+      }
+    ]
+  }
+}
+```
+
+## Coluna do documento
+
+A coluna do documento é a chave principal usada no enriquecimento.
+
+| Tipo de enriquecimento | Documento esperado |
+| --- | --- |
+| `pf` | CPF |
+| `pj` | CNPJ |
+
+Se a coluna selecionada possuir documentos inválidos, esses registros serão contabilizados em `invalid_documents` e podem gerar o arquivo de saída `invalid`.
+
+## Linhas e cabeçalhos
+
+Quando o arquivo possui cabeçalho, a primeira linha é usada como nome das colunas e não entra na contagem de registros processáveis.
+
+Quando o arquivo não possui cabeçalho, todas as linhas são consideradas registros.
+
+<Warning>
+  Evite misturar CPF e CNPJ no mesmo arquivo. O tipo do enriquecimento define a validação aplicada a todos os registros.
+</Warning>
+
+## Arquivos de saída
+
+Ao final do enriquecimento, a Lazy Data pode gerar arquivos separados por resultado.
+
+| Output | Arquivo | Descrição |
+| --- | --- | --- |
+| `success` | `registros_enriquecidos.csv` | Registros enriquecidos com sucesso. |
+| `not_found` | `nao_encontrados.csv` | Registros válidos que não tiveram retorno nos datasets selecionados. |
+| `failed` | `falhas.csv` | Registros que falharam por erro técnico ou falha de consulta. |
+| `invalid` | `documentos_invalidos.csv` | Registros ignorados por CPF ou CNPJ inválido. |
+
+Arquivos sem registros não são gerados.
+
+## Arquivo de sucessos
+
+O arquivo `success` contém registros que tiveram retorno útil nos datasets selecionados.
+
+A estrutura mantém os dados originais do arquivo de entrada e adiciona colunas com dados retornados pelos datasets.
+
+Exemplo simplificado:
+
+```csv
+cpf,nome,person_basic_data.name,person_basic_data.birthdate,person_basic_data.gender
+60235209872,BENITO JUAREZ DE OLIVEIRA,BENITO JUAREZ DE OLIVEIRA,1980-05-10,MASCULINO
+05491816876,ANTONIO SERGIO SILVESTRE,ANTONIO SERGIO SILVESTRE,1978-09-22,MASCULINO
+```
+
+## Arquivo de não encontrados
+
+O arquivo `not_found` contém registros válidos, mas sem retorno útil nos datasets selecionados.
+
+Exemplo simplificado:
+
+```csv
+cpf,nome,reason
+36114391853,PEDRO ROCHA DE CARVALHO,not_found
+```
+
+## Arquivo de falhas
+
+O arquivo `failed` contém registros que não puderam ser processados por erro técnico.
+
+Exemplo simplificado:
+
+```csv
+cpf,nome,error
+74162721815,DULCINEA DE ALMEIDA,provider_request_failed
+```
+
+## Arquivo de inválidos
+
+O arquivo `invalid` contém registros ignorados porque o documento da coluna selecionada não é válido para o tipo do enriquecimento.
+
+Exemplo simplificado:
+
+```csv
+cpf,nome,error
+11111111111,REGISTRO INVALIDO,invalid_document
+```
+
+## Download dos arquivos
+
+Os arquivos finais ficam disponíveis quando o enriquecimento chega em `completed` ou `completed_with_errors`.
+
+Consulte `outputs` no status para saber quais arquivos foram gerados:
+
+```json
+{
+  "outputs": {
+    "success": {
+      "label": "Registros enriquecidos",
+      "rows": 120,
+      "available": true
+    },
+    "invalid": {
+      "label": "Documentos inválidos",
+      "rows": 3,
+      "available": true
+    }
+  }
+}
+```
+
+<Card title="Arquivos de saída" icon="download" horizontal href="/api-reference/enrichment/outputs">
+  Gere links temporários para baixar cada saída disponível.
+</Card>
+
+## Boas práticas
+
+- Use uma coluna exclusiva para CPF ou CNPJ.
+- Evite misturar CPF e CNPJ no mesmo arquivo.
+- Remova linhas vazias antes do upload.
+- Use cabeçalhos claros sempre que possível.
+- Evite colunas duplicadas com o mesmo nome.
+- Prefira CSV para bases muito grandes.
+- Valide a coluna sugerida em `analysis.document_column` antes de iniciar o processamento.
+- Consulte `outputs` antes de tentar baixar um arquivo.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Criar enriquecimento" icon="plus" href="/api-reference/enrichment/create">
+    Crie o registro inicial e gere a assinatura de upload.
+  </Card>
+
+  <Card title="Consultar status" icon="clock" href="/api-reference/enrichment/status">
+    Acompanhe análise, progresso e arquivos gerados.
+  </Card>
+
+  <Card title="Upload para enriquecimento" icon="cloud-arrow-up" href="/api-reference/upload/enrichment">
+    Envie o arquivo de entrada.
+  </Card>
+
+  <Card title="Configurar e executar" icon="play" href="/api-reference/enrichment/start">
+    Selecione coluna e datasets para iniciar.
+  </Card>
+</Columns>

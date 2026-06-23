@@ -1,0 +1,168 @@
+---
+title: "Upload de arquivos"
+description: "Códigos de erro relacionados à assinatura, envio, validação e armazenamento de arquivos enviados para a Lazy Data."
+sidebarTitle: "Upload de arquivos"
+keywords: ["erro upload", "upload lazy data", "assinatura de upload", "arquivo inválido", "limite de upload"]
+---
+
+Esta página lista os principais erros retornados pelos serviços de **upload de arquivos** da Lazy Data.
+
+Esses erros podem ocorrer nos uploads para:
+
+- `https://upload.lazydata.com.br/storage`
+- `https://upload.lazydata.com.br/enrichment`
+
+## Estrutura do erro
+
+Os erros de upload seguem o contrato base:
+
+```json
+{
+  "code": 413,
+  "message": "O arquivo deve ter no máximo 1 GB."
+}
+```
+
+<ResponseField name="code" type="integer" required>
+  Código HTTP retornado pela operação.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva do erro.
+</ResponseField>
+
+<ResponseField name="result" type="object | null">
+  Detalhes adicionais do erro, quando houver. Em erros de upload, normalmente não é retornado.
+</ResponseField>
+
+<Note>
+  O upload usa assinatura temporária no header `X-LazyData-Upload-Signature`. Ele não usa `Authorization: Bearer`.
+</Note>
+
+## Exemplos de resposta
+
+<ResponseExample>
+
+```json 400
+{
+  "code": 400,
+  "message": "O arquivo enviado não corresponde ao arquivo assinado."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Assinatura de upload expirada."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "O arquivo excede o espaço disponível no armazenamento."
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Arquivo não localizado ou já enviado."
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "Este arquivo não está disponível para upload."
+}
+```
+
+```json 413
+{
+  "code": 413,
+  "message": "O arquivo deve ter no máximo 1 GB."
+}
+```
+
+```json 500
+{
+  "code": 500,
+  "message": "Não foi possível salvar o arquivo no armazenamento."
+}
+```
+
+</ResponseExample>
+
+## Assinatura de upload
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `401` | Assinatura de upload ausente ou inválida. | O header `X-LazyData-Upload-Signature` não foi enviado ou está malformado. |
+| `401` | Assinatura de upload inválida. | A assinatura não confere com o payload assinado. |
+| `401` | Assinatura de upload expirada. | A assinatura temporária expirou antes do envio. |
+
+<Warning>
+  Assinaturas expiradas, inválidas ou já usadas não devem ser reaproveitadas. Gere uma nova assinatura no endpoint de preparação do recurso correspondente.
+</Warning>
+
+## Arquivo enviado
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `400` | O arquivo enviado não corresponde ao arquivo assinado. | O nome do arquivo enviado é diferente do nome usado para gerar a assinatura. |
+| `400` | Formato de arquivo não permitido para este upload. | Upload de enriquecimento recebeu extensão diferente de `csv`, `xls` ou `xlsx`. |
+| `400` | Tipo de conteúdo do arquivo não permitido. | Upload de enriquecimento recebeu MIME type incompatível com a extensão. |
+| `400` | Arquivo vazio ou inválido. | Upload de armazenamento recebeu arquivo sem conteúdo válido. |
+| `400` | Arquivo vazio ou inválido para enriquecimento. | Upload de enriquecimento recebeu arquivo vazio ou inválido para análise. |
+| `413` | O arquivo deve ter no máximo 1 GB. | O arquivo excede o limite máximo permitido. |
+
+## Estado do upload
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `404` | Arquivo não localizado ou já enviado. | Upload de armazenamento não encontrou arquivo em `waiting_upload`. |
+| `404` | Enriquecimento não localizado. | A assinatura de enriquecimento aponta para enriquecimento inexistente ou inacessível. |
+| `409` | Este arquivo não está disponível para upload. | O arquivo de armazenamento não está mais disponível para receber conteúdo. |
+| `409` | O arquivo deste enriquecimento já foi enviado. | O enriquecimento já possui arquivo enviado. |
+| `409` | Este enriquecimento não está disponível para upload no momento. | O enriquecimento não está no status correto para receber arquivo. |
+
+## Armazenamento
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `403` | Seu plano atual não possui armazenamento habilitado. | Upload de armazenamento sem cota ativa no plano. |
+| `403` | Limite de armazenamento excedido. | A conta não possui espaço disponível. |
+| `403` | O arquivo excede o espaço disponível no armazenamento. | O tamanho final do arquivo ultrapassa a cota restante. |
+| `500` | Não foi possível receber o arquivo enviado. | Falha inesperada ao receber o stream do upload. |
+| `500` | Não foi possível salvar o arquivo no armazenamento. | Falha ao salvar o arquivo no storage. |
+
+## Especificidades do enriquecimento
+
+Uploads de enriquecimento aceitam apenas arquivos de entrada compatíveis com processamento em massa.
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `400` | Formato de arquivo não permitido para este upload. | A extensão do arquivo não é aceita. |
+| `400` | Tipo de conteúdo do arquivo não permitido. | O tipo MIME não é aceito para a extensão enviada. |
+| `400` | Arquivo vazio ou inválido para enriquecimento. | O arquivo não pôde ser lido ou não possui conteúdo processável. |
+| `404` | Enriquecimento não localizado. | O enriquecimento vinculado à assinatura não existe ou não pertence à conta. |
+| `409` | O arquivo deste enriquecimento já foi enviado. | O upload já foi realizado anteriormente para o enriquecimento. |
+| `409` | Este enriquecimento não está disponível para upload no momento. | O status atual não permite novo upload. |
+
+## Tratamento recomendado
+
+<Steps>
+  <Step title="Confira a assinatura">
+    Envie `X-LazyData-Upload-Signature` exatamente como retornado pela preparação do upload.
+  </Step>
+  <Step title="Não reutilize assinatura">
+    Se a chamada falhar por expiração, divergência ou estado inválido, gere uma nova assinatura.
+  </Step>
+  <Step title="Preserve nome e extensão">
+    O arquivo enviado deve manter o mesmo nome usado na preparação do upload.
+  </Step>
+  <Step title="Valide tamanho e formato antes do envio">
+    Verifique limite de `1 GB`, extensão e tipo de conteúdo antes de iniciar o upload.
+  </Step>
+</Steps>

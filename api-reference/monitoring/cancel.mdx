@@ -1,0 +1,40 @@
+---
+title: "Cancelar monitoramento"
+keywords: ["cancelar monitoramento", "excluir monitoramento", "lazy data"]
+description: "Cancele um monitoramento ativo da conta autenticada."
+sidebarTitle: "Cancelar"
+api: "DELETE /v1/monitoring/{monitoring_id}"
+playground: "interactive"
+---
+
+Cancela um monitoramento ativo. Após o cancelamento, novas checagens deixam de ser agendadas.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Monitoramento excluído com sucesso."
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Monitoramento não encontrado."
+}
+```
+
+</ResponseExample>
+
+## Parâmetros
+
+<ParamField path="monitoring_id" type="string" required>
+  ID do monitoramento.
+</ParamField>
+
+## Regras importantes
+
+- O cancelamento não remove eventos já registrados.
+- Monitoramentos cancelados não aparecem na listagem padrão de ativos.
+- Para monitorar o mesmo alvo novamente, crie um novo monitoramento.

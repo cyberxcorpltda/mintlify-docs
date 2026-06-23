@@ -1,0 +1,256 @@
+---
+title: "Visão geral"
+keywords: ["monitoramento", "monitoramento processual", "monitoramento cpf", "monitoramento cnpj", "notificações", "lazy data"]
+description: "Entenda como funcionam os monitoramentos da Lazy Data."
+sidebarTitle: "Visão geral"
+---
+
+O **monitoramento** permite acompanhar mudanças em processos, pessoas físicas ou pessoas jurídicas e receber notificações quando houver novidades relevantes.
+
+Ele é indicado para casos em que sua equipe precisa acompanhar alterações ao longo do tempo sem executar consultas manuais recorrentes.
+
+<Card title="Eventos e notificações" icon="bell" horizontal href="/monitoring/events">
+  Entenda quando eventos são gerados e como os alertas de monitoramento são enviados.
+</Card>
+
+## Tipos de monitoramento
+
+<Columns cols={3}>
+  <Card title="Processo" icon="gavel" href="/monitoring/process">
+    Acompanhe novas movimentações de um processo judicial específico.
+  </Card>
+
+  <Card title="Pessoa física" icon="user" href="/monitoring/person">
+    Acompanhe mudanças em fontes vinculadas a um CPF.
+  </Card>
+
+  <Card title="Pessoa jurídica" icon="building" href="/monitoring/company">
+    Acompanhe mudanças em fontes vinculadas a um CNPJ.
+  </Card>
+</Columns>
+
+## Como funciona
+
+Cada monitoramento possui alvo, fontes monitoradas, frequência de checagem e e-mail de notificação.
+
+Quando chega o momento da próxima checagem, a Lazy Data consulta as fontes configuradas, compara o resultado com o último snapshot salvo e registra eventos quando encontra alterações relevantes.
+
+Se houver novidade, uma notificação pode ser enviada para o e-mail configurado no monitoramento.
+
+<Steps>
+  <Step title="Consulte a configuração">
+    Veja fontes, frequências e preços disponíveis para o tipo de monitoramento.
+  </Step>
+  <Step title="Valide o alvo">
+    Confirme se processo, CPF ou CNPJ pode ser monitorado antes da criação.
+  </Step>
+  <Step title="Crie o monitoramento">
+    Informe alvo, fontes ou frequência, e-mail de notificação e nome interno.
+  </Step>
+  <Step title="Acompanhe eventos">
+    Consulte checagens, mudanças detectadas, notificações e histórico salvo.
+  </Step>
+</Steps>
+
+## Monitoramento de processo
+
+No monitoramento de processo, a chave principal é o número CNJ.
+
+Esse tipo acompanha um processo específico e registra eventos quando novas movimentações forem encontradas.
+
+Além do número do processo, a criação exige o `court_code`, que identifica o tribunal DataJud onde o processo será validado e acompanhado.
+
+Quando você tiver apenas o número CNJ, use a detecção de tribunal antes de validar ou criar o monitoramento.
+
+<Columns cols={2}>
+  <Card title="Detectar tribunal" icon="landmark" href="/api-reference/monitoring/process/detect-court">
+    Obtenha o `court_code` provável com base no número CNJ.
+  </Card>
+
+  <Card title="Monitoramento de processo" icon="gavel" href="/monitoring/process">
+    Entenda validação, criação, eventos e cobrança do acompanhamento processual.
+  </Card>
+</Columns>
+
+## Monitoramento de pessoa física
+
+No monitoramento de pessoa física, a chave principal é o CPF.
+
+O usuário seleciona quais fontes deseja acompanhar e define a frequência de cada uma.
+
+Esse tipo pode acompanhar, por exemplo:
+
+- novos processos encontrados;
+- protestos;
+- presença em cobrança;
+- indicadores de risco;
+- scores;
+- alterações em fontes cadastrais ou restritivas.
+
+<Card title="Pessoa física" icon="user" horizontal href="/monitoring/person">
+  Veja como validar CPF, selecionar fontes e criar o monitoramento.
+</Card>
+
+## Monitoramento de pessoa jurídica
+
+No monitoramento de pessoa jurídica, a chave principal é o CNPJ.
+
+O usuário seleciona as fontes que deseja acompanhar e define a frequência de cada uma.
+
+Esse tipo pode acompanhar, por exemplo:
+
+- novos processos encontrados;
+- protestos;
+- dívida ativa;
+- indicadores empresariais;
+- scores de crédito;
+- alterações em fontes cadastrais ou restritivas.
+
+<Card title="Pessoa jurídica" icon="building" horizontal href="/monitoring/company">
+  Veja como validar CNPJ, selecionar fontes e criar o monitoramento.
+</Card>
+
+## Frequência
+
+A frequência define de quanto em quanto tempo a Lazy Data deve executar uma nova checagem.
+
+As frequências disponíveis podem variar conforme o tipo de monitoramento, plano e configuração comercial da conta.
+
+| Frequência | Descrição |
+| --- | --- |
+| Diária | Checagem uma vez por dia. |
+| Semanal | Checagem uma vez por semana. |
+| Quinzenal | Checagem a cada quinze dias. |
+| Mensal | Checagem uma vez por mês. |
+
+No monitoramento de pessoa física e pessoa jurídica, a frequência pode ser definida por fonte monitorada.
+
+<Note>
+  Nem todas as fontes são checadas ao mesmo tempo quando cada uma possui frequência própria.
+</Note>
+
+## Eventos
+
+Um evento é criado quando a Lazy Data identifica uma alteração relevante em relação ao último snapshot salvo.
+
+Exemplos:
+
+- nova movimentação processual;
+- novo processo encontrado para CPF ou CNPJ;
+- alteração relevante em score;
+- alteração em indicadores monitorados;
+- mudança em dados retornados por uma fonte.
+
+Quando nada muda, a checagem pode ser concluída sem gerar evento de novidade.
+
+<Card title="Eventos e notificações" icon="bell" horizontal href="/monitoring/events">
+  Veja estrutura de eventos, notificações por e-mail e diferenças por tipo de monitoramento.
+</Card>
+
+## Notificações
+
+Quando uma alteração relevante é detectada, a Lazy Data tenta enviar uma notificação para o e-mail configurado no monitoramento.
+
+As notificações podem ser agrupadas quando uma checagem encontra múltiplas novidades, evitando múltiplos e-mails desnecessários.
+
+Se o envio do e-mail falhar, o evento continua registrado no histórico do monitoramento.
+
+## Cobrança
+
+A cobrança ocorre por checagem executada.
+
+O valor depende do tipo de monitoramento, das fontes selecionadas, da frequência e das regras comerciais da conta.
+
+No monitoramento de pessoa física e pessoa jurídica, o custo pode variar conforme as fontes monitoradas e seus preços no momento da checagem.
+
+O retorno do monitoramento pode informar:
+
+| Campo | Descrição |
+| --- | --- |
+| `price_per_check` | Preço de referência por checagem. |
+| `checks_count` | Total de checagens executadas. |
+| `events_count` | Total de eventos registrados. |
+| `charged_total` | Valor total debitado. |
+| `last_checked_at` | Data da última checagem. |
+| `next_check_at` | Próxima checagem prevista. |
+
+## Saldo, plano e limites
+
+Se não houver saldo, limite mensal ou permissão suficiente no momento da checagem, o monitoramento pode ser pausado automaticamente.
+
+Quando a condição for resolvida, monitoramentos recuperáveis podem ser retomados e ter a próxima checagem recalculada.
+
+<Card title="Códigos de erro" icon="triangle-exclamation" horizontal href="/errors/monitoring">
+  Consulte erros de alvo inválido, permissão, frequência, cobrança e provedor.
+</Card>
+
+## Status do monitoramento
+
+| Status | Descrição |
+| --- | --- |
+| `active` | Monitoramento ativo e elegível para próximas checagens. |
+| `checking` | Checagem em execução. |
+| `paused_insufficient_balance` | Pausado por saldo insuficiente. |
+| `paused_monthly_limit` | Pausado por limite mensal atingido. |
+| `paused_plan_restricted` | Pausado por restrição de plano, conta ou subconta. |
+| `paused_invalid_process` | Processo indisponível após falhas recorrentes. |
+| `error` | Monitoramento com falha não recuperada. |
+| `canceled` | Monitoramento cancelado e sem novas checagens. |
+
+## Histórico
+
+Cada monitoramento mantém um histórico de checagens e eventos identificados.
+
+No painel, é possível visualizar:
+
+- dados principais do alvo monitorado;
+- frequência e próximas checagens;
+- fontes monitoradas;
+- checagens executadas;
+- eventos recentes;
+- status de envio de notificações;
+- valor consumido.
+
+<Card title="Detalhar monitoramento" icon="list-timeline" horizontal href="/api-reference/monitoring/detail">
+  Consulte status, estatísticas, alvo monitorado e eventos registrados.
+</Card>
+
+## Cancelamento
+
+Um monitoramento cancelado deixa de gerar novas checagens e novas notificações.
+
+O histórico salvo permanece disponível conforme as regras de retenção da conta.
+
+<Card title="Cancelar monitoramento" icon="circle-xmark" horizontal href="/api-reference/monitoring/cancel">
+  Encerre um monitoramento ativo quando ele não precisar mais ser acompanhado.
+</Card>
+
+## Boas práticas
+
+- Valide o alvo antes de criar o monitoramento.
+- Em processos, detecte e valide o `court_code` quando tiver apenas o número CNJ.
+- Selecione apenas fontes relevantes para o objetivo do acompanhamento.
+- Use frequências altas apenas para casos críticos.
+- Use um e-mail de equipe ou caixa compartilhada para monitoramentos importantes.
+- Monitore saldo, limite mensal e permissões para evitar pausas automáticas.
+- Trate `409` como monitoramento já existente e reutilize o `id` retornado quando aplicável.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Monitoramento de processo" icon="gavel" href="/monitoring/process">
+    Veja como acompanhar novas movimentações de um processo judicial.
+  </Card>
+
+  <Card title="Pessoa física" icon="user" href="/monitoring/person">
+    Veja como monitorar fontes vinculadas a um CPF.
+  </Card>
+
+  <Card title="Pessoa jurídica" icon="building" href="/monitoring/company">
+    Veja como monitorar fontes vinculadas a um CNPJ.
+  </Card>
+
+  <Card title="Eventos e notificações" icon="bell" href="/monitoring/events">
+    Entenda quando eventos são gerados e como as notificações são enviadas.
+  </Card>
+</Columns>

@@ -1,0 +1,193 @@
+---
+title: "Busca por CPF/CNPJ"
+description: "Inicie uma consulta processual por CPF ou CNPJ nos datasets selecionados."
+sidebarTitle: "Busca por CPF/CNPJ"
+api: "POST /v1/search/process"
+playground: "interactive"
+---
+
+Inicia uma consulta processual usando um CPF ou CNPJ e os datasets processuais informados no corpo da requisição.
+
+Consultas processuais são sempre assíncronas. A resposta inicial retorna um `id`, e o resultado deve ser consultado posteriormente no endpoint de [resultado assíncrono](/api-reference/search/async-result).
+
+<ResponseExample>
+
+```json 202
+{
+  "code": 202,
+  "message": "Consulta iniciada com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "queued",
+    "status_values": ["queued", "processing", "completed", "failed"],
+    "datasets": ["process_cnj_pje"]
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Um ou mais parâmetros informados são inválidos."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="taxid" type="string" required>
+  CPF ou CNPJ que será pesquisado nos módulos processuais selecionados. Pontuação é aceita e removida automaticamente.
+</ParamField>
+
+<ParamField body="datasets" type="string[]" required>
+  Lista de IDs dos datasets processuais que serão consultados.
+</ParamField>
+
+<ParamField body="additional" type="object">
+  Dados adicionais por dataset, quando algum dataset exigir parâmetros extras.
+</ParamField>
+
+<ParamField header="x-ambient" type="string" placeholder="sandbox">
+  Use `sandbox` para executar uma chamada de teste sem consumo de saldo.
+</ParamField>
+
+<Note>
+  Para detalhes sobre chamadas de teste, consulte [Ambiente de teste](/quickstart/sandbox).
+</Note>
+
+## Exemplo de corpo
+
+```json
+{
+  "taxid": "00000000000",
+  "datasets": ["process_cnj_pje"],
+  "additional": {}
+}
+```
+
+<Warning>
+  O documento acima é fictício e serve apenas para demonstrar a estrutura da requisição. Em chamadas reais ou sandbox, informe um CPF ou CNPJ válido para o ambiente utilizado.
+</Warning>
+
+## Datasets processuais
+
+Antes de iniciar a consulta, liste os datasets disponíveis em [Datasets e preços](/api-reference/search/datasets) usando o tipo `process`.
+
+Use apenas datasets com `active: true`.
+
+## Parâmetros adicionais por dataset
+
+Alguns datasets podem exigir campos adicionais. Consulte `additional_fields` no endpoint de datasets e preços para saber quais campos devem ser enviados.
+
+Exemplo de envio de dados adicionais:
+
+```json
+{
+  "taxid": "00000000000000",
+  "datasets": ["process_example_dataset"],
+  "additional": {
+    "process_example_dataset": {
+      "state": "SP"
+    }
+  }
+}
+```
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta da API.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da resposta.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Objeto principal com os dados de acompanhamento da consulta assíncrona.
+</ResponseField>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador da consulta assíncrona. Use este valor para consultar o resultado depois. |
+| `status` | `string` | Status atual da consulta. Na resposta inicial, normalmente retorna `queued`. |
+| `status_values` | `array<string>` | Lista de status possíveis da consulta assíncrona. |
+| `datasets` | `array<string>` | Datasets processuais solicitados na consulta. |
+
+## Status possíveis
+
+| Status | Descrição |
+| --- | --- |
+| `queued` | Consulta criada e aguardando processamento. |
+| `processing` | Consulta em processamento. |
+| `completed` | Consulta finalizada. Verifique o resultado, erros e status por dataset no endpoint de resultado. |
+| `failed` | Consulta finalizada com falha geral. |
+
+## Consulta do resultado
+
+Após receber o `id`, consulte o andamento e o resultado final em:
+
+```text
+GET /v1/search/process/{history_id}
+```
+
+Onde `history_id` é o `id` retornado na criação da consulta.
+
+Consulte a página de [resultado assíncrono](/api-reference/search/async-result) para ver a estrutura completa do retorno final.
+
+## Retorno final
+
+Quando a consulta for finalizada, o resultado assíncrono retorna a estrutura completa da busca, incluindo:
+
+| Campo | Descrição |
+| --- | --- |
+| `query` | Documento, datasets e campos adicionais usados na consulta. |
+| `cost` | Valores debitados e estornados por dataset. |
+| `timing` | Tempo total e tempo individual por dataset, quando disponível. |
+| `errors` | Erros por dataset, quando ocorrerem. |
+| `datasets_status` | Status individual de cada dataset consultado. |
+| `result` | Dados retornados por cada dataset processual. |
+
+<Warning>
+  Campos descritos na estrutura dos datasets podem não aparecer em todas as consultas. A disponibilidade depende da fonte, do documento consultado e do dataset selecionado.
+</Warning>
+
+## Respostas esperadas
+
+As respostas possíveis estão exemplificadas no painel lateral da página.
+
+| Status | Quando ocorre |
+| --- | --- |
+| `202` | Consulta processual iniciada com sucesso. |
+| `400` | Requisição inválida, documento inválido, dataset ausente ou parâmetro incompatível. |
+| `401` | A chave da API está ausente, inválida ou não pôde ser autenticada. |
+| `403` | A credencial não possui escopo de consulta, o plano não permite acesso ou há bloqueio financeiro. |
+
+## Fluxo recomendado
+
+1. Liste os datasets disponíveis em [Datasets e preços](/api-reference/search/datasets) usando `target: process`.
+2. Selecione apenas datasets processuais ativos.
+3. Envie o CPF ou CNPJ, os datasets e os campos adicionais necessários.
+4. Guarde o `id` retornado.
+5. Consulte o resultado em [Resultado assíncrono](/api-reference/search/async-result) usando `target: process`.
+
+<Note>
+  Evite polling agressivo. Consultas processuais podem levar mais tempo por dependerem de múltiplas fontes e tribunais.
+</Note>

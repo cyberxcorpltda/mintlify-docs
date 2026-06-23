@@ -1,0 +1,313 @@
+---
+title: "Pastas e arquivos"
+description: "Veja como organizar, navegar, renomear e excluir itens no armazenamento."
+sidebarTitle: "Pastas e arquivos"
+keywords: ["pastas", "arquivos", "armazenamento", "explorador de arquivos", "lazy data"]
+---
+
+A área de **pastas e arquivos** permite organizar os itens armazenados na conta usando uma estrutura semelhante a um explorador de arquivos.
+
+Você pode criar pastas, navegar entre diretórios, preparar uploads, enviar arquivos, renomear itens e excluir arquivos ou pastas quando necessário.
+
+<Card title="Listar itens pela API" icon="folder-tree" horizontal href="/api-reference/storage/list-items">
+  Consulte pastas, arquivos, caminho atual, paginação e uso do armazenamento.
+</Card>
+
+## Estrutura de navegação
+
+O armazenamento usa uma hierarquia de pastas.
+
+Exemplo:
+
+```text
+Início / Documentos / Relatórios / Junho
+```
+
+Cada pasta pode conter:
+
+- arquivos;
+- subpastas;
+- itens em upload ou já enviados.
+
+Na API, a pasta atual é controlada por `parent_id`. Quando `parent_id` não é informado, a listagem retorna a raiz do armazenamento.
+
+## Caminho atual
+
+No topo da listagem, o painel exibe o caminho atual da pasta aberta.
+
+Na API, esse caminho é retornado em `breadcrumbs`.
+
+```json
+{
+  "breadcrumbs": [
+    {
+      "id": null,
+      "name": "Início"
+    },
+    {
+      "id": "54d8a266-4e21-4a9a-9c15-b4b93bc11c6e",
+      "name": "Documentos"
+    },
+    {
+      "id": "92f7f2d2-8f52-4dd6-b951-3e81313f5a76",
+      "name": "Relatórios"
+    }
+  ]
+}
+```
+
+Quando o caminho possui muitas pastas, a interface pode resumir parte da navegação para evitar poluição visual.
+
+Exemplo:
+
+```text
+Início / ... / Relatórios / Junho
+```
+
+## Listagem de itens
+
+A listagem separa pastas e arquivos.
+
+```json
+{
+  "result": {
+    "parent": null,
+    "folders": [],
+    "files": [],
+    "summary": {},
+    "pagination": {}
+  }
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `parent` | Pasta atual. Retorna `null` na raiz. |
+| `breadcrumbs` | Caminho da raiz até a pasta atual. |
+| `folders` | Pastas encontradas na pasta atual. |
+| `files` | Arquivos encontrados na pasta atual. |
+| `summary` | Uso atual do armazenamento da conta. |
+| `pagination` | Dados de paginação da listagem. |
+
+<Note>
+  Use `pagination.has_more` e `pagination.next_offset` para carregar mais itens quando a pasta possuir muitos arquivos ou subpastas.
+</Note>
+
+## Criar pasta
+
+Para criar uma nova pasta:
+
+1. Acesse a área de armazenamento.
+2. Navegue até o local desejado.
+3. Clique em **Nova pasta**.
+4. Informe o nome da pasta.
+5. Confirme a criação.
+
+Pela API, envie `name` e `parent_id`.
+
+```json
+{
+  "name": "Contratos",
+  "parent_id": null
+}
+```
+
+Use `parent_id: null` para criar na raiz ou informe o ID de uma pasta existente para criar dentro dela.
+
+<Card title="Criar pasta" icon="folder-plus" horizontal href="/api-reference/storage/create-folder">
+  Crie uma pasta na raiz ou dentro de outra pasta.
+</Card>
+
+## Entrar em uma pasta
+
+Para abrir uma pasta no painel, clique sobre o item na listagem.
+
+Pela API, chame a listagem usando o ID da pasta como `parent_id`:
+
+```text
+GET /v1/storage/items
+Query: parent_id=54d8a266-4e21-4a9a-9c15-b4b93bc11c6e
+```
+
+O retorno atualiza:
+
+- `parent`;
+- `breadcrumbs`;
+- `folders`;
+- `files`;
+- `pagination`.
+
+## Voltar para uma pasta anterior
+
+Use o caminho exibido no topo para retornar a níveis anteriores.
+
+Exemplo:
+
+```text
+Início / Documentos / Relatórios
+```
+
+Clicar em `Documentos` retorna para essa pasta.
+
+Pela API, use o `id` do item correspondente em `breadcrumbs[]` como novo `parent_id`.
+
+## Arquivos
+
+Arquivos aparecem em `files[]` com metadados como:
+
+| Campo | Descrição |
+| --- | --- |
+| `id` | Identificador do arquivo. |
+| `type` | Tipo do item. Para arquivos, retorna `file`. |
+| `name` | Nome do arquivo. |
+| `parent_id` | Pasta onde o arquivo está localizado. |
+| `extension` | Extensão identificada pelo nome. |
+| `content_type` | Tipo MIME detectado. |
+| `size` | Tamanho em bytes. |
+| `status` | Status atual do arquivo. |
+| `uploaded_at` | Data de envio, quando disponível. |
+
+Arquivos só ficam disponíveis para download quando estão com status compatível, normalmente `uploaded`.
+
+## Status de arquivo
+
+| Status | Descrição |
+| --- | --- |
+| `waiting_upload` | Registro criado e aguardando envio do arquivo. |
+| `receiving_upload` | Upload em andamento. |
+| `uploaded` | Arquivo enviado e salvo com sucesso. |
+| `failed` | Upload falhou ou foi recusado. |
+| `deleting` | Exclusão solicitada e em processamento. |
+| `deleted` | Item excluído. |
+| `delete_failed` | Falha ao remover objeto do storage. |
+
+## Renomear itens
+
+Arquivos e pastas podem ser renomeados.
+
+Ao renomear um item:
+
+- o conteúdo armazenado permanece o mesmo;
+- o caminho lógico do item é atualizado;
+- o identificador interno permanece estável;
+- o novo nome não pode conflitar com outro item do mesmo tipo na mesma pasta.
+
+```json
+{
+  "name": "contrato-assinado.pdf"
+}
+```
+
+Use `item_type` para indicar o tipo:
+
+| Valor | Descrição |
+| --- | --- |
+| `file` | Arquivo armazenado. |
+| `folder` | Pasta do armazenamento. |
+
+<Card title="Renomear item" icon="pen-to-square" horizontal href="/api-reference/storage/rename-item">
+  Renomeie uma pasta ou arquivo do armazenamento.
+</Card>
+
+## Excluir arquivos
+
+Ao excluir um arquivo, ele deixa de aparecer na listagem e passa a não estar disponível para download.
+
+A exclusão é assíncrona. A resposta `202` indica que a solicitação foi aceita e o item entrou em processamento de remoção.
+
+```json
+{
+  "item_type": "file",
+  "item_id": "9fcb573b-7f62-4774-978b-07e89dfef5f2"
+}
+```
+
+## Excluir pastas
+
+Pastas também podem ser excluídas.
+
+Ao excluir uma pasta, arquivos e subpastas internas também entram no fluxo de exclusão.
+
+<Warning>
+  Pastas com upload em andamento podem não ser excluídas até o upload finalizar ou falhar.
+</Warning>
+
+Se houver falha ao remover algum objeto do storage, o item pode ficar com status `delete_failed`.
+
+<Card title="Excluir item" icon="trash" horizontal href="/api-reference/storage/delete-item">
+  Inicie a exclusão assíncrona de uma pasta ou arquivo.
+</Card>
+
+## Ícones por tipo de item
+
+A interface exibe ícones diferentes para facilitar a identificação dos itens.
+
+| Tipo | Exemplo |
+| --- | --- |
+| Pasta | Diretórios e subdiretórios. |
+| Imagem | JPG, PNG, WEBP. |
+| PDF | Arquivos `.pdf`. |
+| Planilha | CSV, XLS, XLSX. |
+| Documento | DOC, DOCX, TXT. |
+| Genérico | Arquivos sem tipo identificado. |
+
+## Organização recomendada
+
+Para manter o armazenamento fácil de navegar:
+
+- crie pastas por finalidade;
+- use nomes claros e curtos;
+- evite pastas muito profundas sem necessidade;
+- separe arquivos de teste de arquivos finais;
+- revise periodicamente arquivos antigos;
+- acompanhe o uso de cota antes de uploads grandes.
+
+## Boas práticas de nomes
+
+Prefira nomes claros:
+
+```text
+Relatórios
+Bases de enriquecimento
+Contratos
+Consultas exportadas
+Documentos internos
+```
+
+Evite nomes muito longos ou genéricos:
+
+```text
+Nova pasta
+Arquivos
+Coisas
+Teste final final 2
+```
+
+## Regras importantes
+
+- Nomes são normalizados antes de salvar.
+- Caracteres de caminho são removidos ou tratados pela API.
+- Não é permitido criar duas pastas com o mesmo nome na mesma pasta pai.
+- Não é permitido manter dois arquivos com o mesmo nome na mesma pasta.
+- Arquivos só podem ser renomeados quando estão em status compatível.
+- Exclusões de pastas podem ser processadas em segundo plano.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Upload e download" icon="cloud-arrow-up" href="/storage/upload-download">
+    Veja como enviar e baixar arquivos no armazenamento.
+  </Card>
+
+  <Card title="Listar itens" icon="folder-tree" href="/api-reference/storage/list-items">
+    Consulte pastas, arquivos, breadcrumbs e paginação.
+  </Card>
+
+  <Card title="Preparar upload" icon="file-arrow-up" href="/api-reference/storage/prepare-upload">
+    Gere assinatura temporária para enviar arquivos.
+  </Card>
+
+  <Card title="Permissões e limites" icon="shield-check" href="/storage/permissions-limits">
+    Consulte regras de acesso, cota e tamanho máximo.
+  </Card>
+</Columns>

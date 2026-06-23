@@ -1,0 +1,175 @@
+---
+title: "Visão geral"
+description: "Entenda como funcionam as validações da Lazy Data."
+sidebarTitle: "Visão geral"
+keywords: ["validações", "validação facial", "validação cadastral", "comparação facial", "lazy data"]
+---
+
+As **validações** permitem confirmar informações enviadas pelo usuário ou pela sua aplicação usando regras objetivas de análise.
+
+A Lazy Data oferece validações para apoiar fluxos de cadastro, onboarding, análise de risco, revisão manual e prevenção de inconsistências.
+
+<Card title="Endpoints de validação" icon="shield-check" horizontal href="/api-reference/validation/registration">
+  Consulte os endpoints técnicos de comparação facial e validação cadastral.
+</Card>
+
+## Tipos de validação
+
+<Columns cols={2}>
+  <Card title="Comparação facial" icon="face-viewfinder" href="/validation/facial-compare">
+    Compare duas imagens faciais e receba similaridade, confiança e compatibilidade.
+  </Card>
+
+  <Card title="Validação cadastral" icon="id-card" href="/validation/registration">
+    Compare dados informados com dados cadastrais disponíveis e receba score, divergências e ação recomendada.
+  </Card>
+</Columns>
+
+## Como funciona
+
+Cada validação recebe dados de entrada, executa as regras do serviço correspondente e retorna um resultado estruturado.
+
+<Steps>
+  <Step title="Envie os dados de entrada">
+    Informe imagens, documentos e dados cadastrais conforme o tipo de validação.
+  </Step>
+  <Step title="A API executa a validação">
+    A Lazy Data normaliza os dados, consulta referências disponíveis e aplica as regras do serviço.
+  </Step>
+  <Step title="Receba o resultado estruturado">
+    A resposta retorna score, status, similaridade, divergências ou decisão recomendada, conforme a validação.
+  </Step>
+  <Step title="Aplique sua política interna">
+    Use o retorno para aprovar, reprovar, revisar manualmente ou solicitar novos dados.
+  </Step>
+</Steps>
+
+## Retorno padrão
+
+As respostas seguem o padrão da API:
+
+```json
+{
+  "code": 200,
+  "message": "Validação concluída com sucesso.",
+  "result": {}
+}
+```
+
+O campo `result` contém o objeto específico da validação executada.
+
+## Comparação facial
+
+A comparação facial recebe duas imagens e calcula se elas provavelmente representam a mesma pessoa.
+
+Campos principais do resultado:
+
+| Campo | Descrição |
+| --- | --- |
+| `matched` | Indica se a similaridade atingiu o limite configurado. |
+| `similarity` | Percentual de similaridade entre as faces comparadas. |
+| `confidence` | Confiança da detecção facial usada na comparação. |
+| `threshold` | Limite mínimo aplicado na decisão. |
+
+<Card title="Comparação facial" icon="face-viewfinder" horizontal href="/validation/facial-compare">
+  Entenda uso, requisitos de imagem, threshold e interpretação do resultado.
+</Card>
+
+## Validação cadastral
+
+A validação cadastral compara dados enviados com dados disponíveis na base e retorna uma decisão estruturada.
+
+Campos principais do resultado:
+
+| Campo | Descrição |
+| --- | --- |
+| `status` | Resultado consolidado, como `approved`, `manual_review` ou `rejected`. |
+| `score` | Pontuação final de compatibilidade. |
+| `recommended_action` | Ação sugerida para o fluxo do cliente. |
+| `field_results` | Resultado individual por campo comparado. |
+| `critical_errors` | Divergências críticas encontradas na validação. |
+
+<Card title="Validação cadastral" icon="id-card" horizontal href="/validation/registration">
+  Entenda score, divergências, ações recomendadas e modelos PF/PJ.
+</Card>
+
+## Cobrança
+
+A cobrança ocorre quando a validação é concluída com sucesso pelo serviço, independentemente do resultado indicar aprovação, reprovação ou necessidade de revisão.
+
+Em chamadas de teste, não há débito de saldo.
+
+<Note>
+  O resultado da validação não deve ser interpretado isoladamente como decisão final. A aprovação, reprovação ou revisão depende da política de risco da sua operação.
+</Note>
+
+## Chamada de teste
+
+As validações podem ser executadas em ambiente de teste para validar integração sem consumir saldo.
+
+Envie o header:
+
+```http
+x-ambient: sandbox
+```
+
+<Card title="Ambiente de teste" icon="flask" horizontal href="/quickstart/sandbox">
+  Veja como habilitar chamadas de teste usando o header correto.
+</Card>
+
+## Respostas e erros
+
+Quando uma validação não puder ser executada, a API retorna um `code` e uma `message` explicando o motivo.
+
+Exemplo:
+
+```json
+{
+  "code": 43001,
+  "message": "Validação não encontrada.",
+  "result": null
+}
+```
+
+Erros comuns podem ocorrer por:
+
+- payload inválido;
+- documento inválido;
+- imagem inválida;
+- face não detectada;
+- validação indisponível para a conta;
+- saldo ou limite insuficiente;
+- falha temporária de provedor.
+
+<Card title="Códigos de erro de validações" icon="triangle-exclamation" horizontal href="/errors/validation">
+  Veja os códigos retornados pelas validações e seus significados.
+</Card>
+
+## Boas práticas
+
+- Use sandbox para validar payloads antes de chamadas reais.
+- Não armazene imagens, documentos ou retornos sensíveis em logs públicos.
+- Trate falhas de payload separadamente de falhas temporárias de provedor.
+- Combine validação cadastral e comparação facial quando o fluxo exigir maior rigor.
+- Encaminhe resultados inconclusivos para revisão manual quando houver impacto sensível.
+- Registre apenas os campos necessários para auditoria e suporte.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Comparação facial" icon="face-viewfinder" href="/validation/facial-compare">
+    Veja como comparar duas imagens faciais.
+  </Card>
+
+  <Card title="Validação cadastral" icon="id-card" href="/validation/registration">
+    Veja como validar dados cadastrais de pessoas e empresas.
+  </Card>
+
+  <Card title="API de comparação facial" icon="face-viewfinder" href="/api-reference/validation/facial-compare">
+    Consulte parâmetros e respostas do endpoint.
+  </Card>
+
+  <Card title="API de validação cadastral" icon="shield-check" href="/api-reference/validation/registration">
+    Consulte parâmetros e respostas do endpoint.
+  </Card>
+</Columns>

@@ -1,0 +1,239 @@
+---
+title: "Pessoa física"
+description: "Consulte dados vinculados a CPF usando datasets e buscas especializadas da Lazy Data."
+sidebarTitle: "Pessoa física"
+keywords: ["consulta pessoa física", "consulta cpf", "cpf", "datasets pf", "busca por telefone", "busca por email", "lazy data"]
+---
+
+A consulta de **pessoa física** permite buscar informações vinculadas a CPF e localizar registros por dados auxiliares, como nome, filiação, telefone ou e-mail.
+
+Use esta funcionalidade para validação cadastral, análise de risco, apoio antifraude, análise de crédito, compliance e automação de fluxos operacionais.
+
+## Formas de consulta
+
+<Columns cols={2}>
+  <Card title="Busca por CPF" icon="id-card" href="/api-reference/search/person/by-cpf">
+    Consulte um CPF nos datasets selecionados e receba o retorno agrupado por dataset.
+  </Card>
+
+  <Card title="Busca avançada" icon="magnifying-glass" href="/api-reference/search/person/advanced">
+    Localize pessoas por nome, filiação, RG, PIS, título de eleitor ou CEP.
+  </Card>
+
+  <Card title="Busca por telefone" icon="phone" href="/api-reference/search/person/phone">
+    Encontre possíveis pessoas vinculadas a um telefone com DDD.
+  </Card>
+
+  <Card title="Busca por e-mail" icon="envelope" href="/api-reference/search/person/email">
+    Encontre possíveis pessoas vinculadas a um endereço de e-mail.
+  </Card>
+</Columns>
+
+## Endpoints disponíveis
+
+| Recurso | Método | Endpoint | Uso principal |
+| --- | --- | --- | --- |
+| Busca por CPF | `POST` | `/v1/search/person` | Consulta datasets de pessoa física a partir de um CPF. |
+| Busca avançada | `POST` | `/v1/search/person/advanced` | Busca paginada por dados cadastrais ou documentos auxiliares. |
+| Busca por telefone | `POST` | `/v1/search/person/phone` | Busca paginada por telefone com DDD. |
+| Busca por e-mail | `POST` | `/v1/search/person/email` | Busca paginada por e-mail. |
+| Datasets e preços | `GET` | `/v1/search/datasets/person` | Lista datasets disponíveis, preço aplicado e estrutura de retorno. |
+| Resultado assíncrono | `GET` | `/v1/search/person/{id}` | Consulta o resultado de uma busca por CPF iniciada em modo assíncrono. |
+
+## Busca por CPF com datasets
+
+A busca por CPF é a consulta principal de pessoa física. Ela usa o campo `taxid` como identificador e executa um ou mais datasets informados em `datasets`.
+
+```json
+{
+  "taxid": "00000000000",
+  "mode": "async",
+  "datasets": ["person_basic_data"],
+  "additional": {}
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+| --- | --- | --- | --- |
+| `taxid` | `string` | Sim | CPF consultado. Pode ser enviado com ou sem pontuação. |
+| `mode` | `string` | Não | Modo da consulta. Aceita `async` ou `sync`. O padrão recomendado é `async`. |
+| `datasets` | `array<string>` | Sim | Lista de IDs dos datasets de pessoa física que serão consultados. |
+| `additional` | `object` | Não | Dados adicionais por dataset, quando algum dataset exigir parâmetros extras. |
+
+<Note>
+  Liste os datasets disponíveis em [Datasets e preços](/api-reference/search/datasets) usando `target: person`.
+</Note>
+
+## Modos de execução
+
+| Modo | Descrição |
+| --- | --- |
+| `async` | Inicia a consulta e retorna um `id` para acompanhar o processamento depois. É o modo recomendado para consultas com múltiplos datasets ou fontes online. |
+| `sync` | Aguarda a conclusão da consulta e retorna os dados diretamente na resposta. |
+
+Consultas assíncronas podem passar pelos seguintes status:
+
+| Status | Descrição |
+| --- | --- |
+| `queued` | Consulta criada e aguardando processamento. |
+| `processing` | Consulta em processamento. |
+| `completed` | Consulta finalizada. Verifique o resultado, erros e status por dataset. |
+| `failed` | Consulta finalizada com falha geral. |
+
+Para consultar o resultado final, use o endpoint de [resultado assíncrono](/api-reference/search/async-result) com `target: person`.
+
+## Buscas paginadas
+
+As rotas de busca avançada, telefone e e-mail retornam listas paginadas. Elas não usam `datasets`, porque cada rota já representa uma busca específica.
+
+### Busca avançada
+
+Use quando você não possui o CPF, mas possui dados como nome completo, nome da mãe, nome do pai, RG, PIS, título de eleitor ou CEP.
+
+```json
+{
+  "name": "CARLOS SANTOS SILVA",
+  "mother_name": "MARIA SANTOS SILVA",
+  "zipcode": "01001000",
+  "page": 1
+}
+```
+
+Campos aceitos:
+
+| Campo | Descrição |
+| --- | --- |
+| `name` | Nome completo da pessoa. Quando informado, deve conter ao menos nome e sobrenome. |
+| `mother_name` | Nome completo da mãe. |
+| `father_name` | Nome completo do pai. |
+| `identity_card` | Número do RG. Pontuação é removida automaticamente. |
+| `pis` | Número do PIS. Pontuação é removida automaticamente. |
+| `voter_registration` | Número do título de eleitor. Pontuação é removida automaticamente. |
+| `zipcode` | CEP com 8 dígitos. |
+| `page` | Página dos resultados. Use valores a partir de `1`. |
+
+### Busca por telefone
+
+Use quando você possui um telefone com DDD e precisa localizar possíveis pessoas vinculadas a ele.
+
+```json
+{
+  "phone": "11999990000",
+  "page": 1
+}
+```
+
+O telefone aceita pontuação e prefixo `55`. A API normaliza o valor antes da consulta.
+
+### Busca por e-mail
+
+Use quando você possui um endereço de e-mail e precisa localizar possíveis pessoas vinculadas a ele.
+
+```json
+{
+  "email": "contato@example.com",
+  "page": 1
+}
+```
+
+O e-mail é normalizado para letras minúsculas antes da consulta.
+
+## Retorno das buscas paginadas
+
+As buscas avançada, por telefone e por e-mail retornam a mesma estrutura base:
+
+```json
+{
+  "code": 200,
+  "message": "Consulta realizada com sucesso.",
+  "result": {
+    "items": [],
+    "has_more": false,
+    "page": 1,
+    "price": 0.09,
+    "charged": 0.09,
+    "debit_only_if_found": false,
+    "time": 0.42,
+    "test": false
+  }
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `items` | Registros encontrados para os filtros enviados. |
+| `has_more` | Indica se existe próxima página disponível. |
+| `page` | Página retornada. |
+| `price` | Preço da busca para a conta autenticada. |
+| `charged` | Valor debitado nesta chamada. Em sandbox, retorna `0`. |
+| `debit_only_if_found` | Indica se a cobrança ocorre apenas quando houver resultado útil. |
+| `time` | Tempo de execução em segundos. |
+| `test` | Indica se a chamada foi executada em ambiente de teste. |
+
+## Dados adicionais por dataset
+
+Alguns datasets de busca por CPF podem exigir parâmetros complementares. Esses campos aparecem em `additional_fields` no endpoint de [Datasets e preços](/api-reference/search/datasets).
+
+Quando exigidos, envie os dados em `additional`, usando o ID do dataset como chave:
+
+```json
+{
+  "taxid": "00000000000",
+  "mode": "async",
+  "datasets": ["person_example_dataset"],
+  "additional": {
+    "person_example_dataset": {
+      "state": "SP"
+    }
+  }
+}
+```
+
+<Info>
+  O dataset acima é fictício e serve apenas para demonstrar a estrutura de envio de dados adicionais.
+</Info>
+
+## Ambiente de teste
+
+As consultas de pessoa física têm suporte ao ambiente de teste.
+
+Para executar uma chamada sem consumo de saldo, envie o header:
+
+```http
+x-ambient: sandbox
+```
+
+<Card title="Ambiente de teste" icon="flask" horizontal href="/quickstart/sandbox">
+  Veja como usar o header de sandbox e validar integrações sem consumir saldo.
+</Card>
+
+## Regras importantes
+
+- O CPF deve ser válido para buscas por CPF.
+- A busca avançada exige ao menos um filtro válido.
+- Campos fora do schema documentado são rejeitados pela validação da API.
+- Datasets indisponíveis, inativos ou não permitidos para a conta podem retornar erro.
+- Consultas com múltiplos datasets podem retornar resultados parciais caso algum dataset falhe.
+- A cobrança é calculada com base nos datasets ou buscas efetivamente executados, conforme as regras comerciais da conta.
+- Alguns campos descritos nos datasets podem não ser retornados em todas as consultas.
+- Alguns dados podem estar indisponíveis por regra legal, restrição de privacidade ou ausência de informação na base.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Datasets e preços" icon="database" href="/api-reference/search/datasets">
+    Liste os datasets disponíveis para pessoa física e veja preço, campos adicionais e estrutura de retorno.
+  </Card>
+
+  <Card title="Resultado assíncrono" icon="clock" href="/api-reference/search/async-result">
+    Consulte o andamento e o resultado final de uma consulta iniciada em modo assíncrono.
+  </Card>
+
+  <Card title="Pessoa jurídica" icon="building" href="/search/company">
+    Veja como consultar dados vinculados a CNPJ.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/search">
+    Consulte os erros relacionados a consultas.
+  </Card>
+</Columns>

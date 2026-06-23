@@ -1,0 +1,153 @@
+---
+title: "Configurar e executar"
+description: "Configure coluna de documento, datasets e campos adicionais para iniciar o enriquecimento."
+sidebarTitle: "Configurar e executar"
+api: "POST /v1/enrichment/{enrichment_id}/start"
+playground: "interactive"
+keywords: ["executar enriquecimento", "configurar enriquecimento", "datasets enriquecimento", "lazy data"]
+---
+
+Configura e inicia o processamento de um enriquecimento.
+
+Esta rota deve ser chamada após o upload e análise do arquivo, quando o enriquecimento estiver em `waiting_configuration`.
+
+<ResponseExample>
+
+```json 202
+{
+  "code": 202,
+  "message": "Enriquecimento enviado para a fila.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "type": "pf",
+    "name": "Base de clientes",
+    "status": "queued",
+    "status_label": "Na fila",
+    "resume_step": "progress",
+    "configuration": {
+      "document_column": 0,
+      "document_column_name": "cpf",
+      "datasets": ["person_basic_data"],
+      "additional": {}
+    },
+    "cost": {
+      "estimated": 6,
+      "reserved": 6,
+      "consumed": 0,
+      "refunded": 0,
+      "datasets": {
+        "person_basic_data": {
+          "id": "person_basic_data",
+          "name": "Dados básicos",
+          "price": 0.05,
+          "debit_only_if_found": false
+        }
+      }
+    },
+    "progress": {
+      "stage": "queued",
+      "stage_label": "Enriquecimento na fila de processamento",
+      "percent": 0,
+      "total_rows": 120,
+      "processed_rows": 0,
+      "enriched_documents": 0,
+      "invalid_documents": 0,
+      "not_found_documents": 0,
+      "failed_rows": 0
+    }
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "A coluna do documento selecionada não foi localizada no arquivo."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A funcionalidade de consulta não está habilitada para a conta atual."
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "Este enriquecimento não está disponível para iniciar."
+}
+```
+
+</ResponseExample>
+
+## Parâmetros
+
+<ParamField path="enrichment_id" type="string" required>
+  ID do enriquecimento.
+</ParamField>
+
+## Corpo da requisição
+
+<ParamField body="document_column" type="integer" required>
+  Índice da coluna que contém CPF ou CNPJ no arquivo analisado.
+</ParamField>
+
+<ParamField body="datasets" type="string[]" required>
+  Lista de IDs dos datasets que serão usados no enriquecimento.
+</ParamField>
+
+<ParamField body="additional" type="object">
+  Dados adicionais por dataset, quando algum dataset exigir campos extras.
+</ParamField>
+
+<Note>
+  Liste os datasets habilitados em [Datasets disponíveis](/api-reference/enrichment/datasets) antes de iniciar o enriquecimento. Não use a listagem geral de consultas para decidir datasets de enriquecimento.
+</Note>
+
+## Exemplo de corpo
+
+```json
+{
+  "document_column": 0,
+  "datasets": ["person_basic_data"],
+  "additional": {}
+}
+```
+
+## Como escolher `document_column`
+
+Use a resposta de [Consultar status](/api-reference/enrichment/status) após a análise do arquivo.
+
+O campo `analysis.columns[]` retorna colunas com `index`, `name` e amostras. Envie em `document_column` o `index` da coluna que contém CPF ou CNPJ.
+
+```json
+{
+  "analysis": {
+    "columns": [
+      {
+        "index": 0,
+        "name": "cpf",
+        "sample": "00000000000"
+      }
+    ]
+  }
+}
+```
+
+## Regras de cobrança
+
+Ao iniciar, a API calcula:
+
+```text
+total de linhas válidas x soma dos preços dos datasets
+```
+
+O valor estimado é reservado antes da execução. Ao final, podem existir estornos conforme resultado e regra `debit_only_if_found` de cada dataset.
+
+## Próximo passo
+
+<Card title="Consultar status" icon="clock" horizontal href="/api-reference/enrichment/status">
+  Acompanhe a fila, progresso, consumo, estornos e arquivos de saída.
+</Card>

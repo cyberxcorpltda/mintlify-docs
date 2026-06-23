@@ -1,0 +1,94 @@
+---
+title: "Renomear item"
+keywords: ["renomear arquivo", "renomear pasta", "storage", "lazy data"]
+description: "Renomeie um arquivo ou pasta do armazenamento."
+sidebarTitle: "Renomear item"
+api: "PATCH /v1/storage/items/{item_type}/{item_id}"
+playground: "interactive"
+---
+
+Renomeia um arquivo ou pasta do armazenamento.
+
+Use `item_type` para indicar se o item é uma pasta (`folder`) ou arquivo (`file`).
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Item renomeado.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "type": "file",
+    "name": "contrato-assinado.pdf",
+    "parent_id": null,
+    "extension": "pdf",
+    "content_type": "application/pdf",
+    "size": 24576,
+    "status": "uploaded",
+    "uploaded_at": "2026-06-22T12:00:00+00:00",
+    "created_at": "2026-06-22T11:59:40+00:00",
+    "updated_at": "2026-06-22T12:10:00+00:00"
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Nome inválido."
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Item não localizado."
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "Já existe um item com este nome nesta pasta."
+}
+```
+
+</ResponseExample>
+
+## Parâmetros
+
+<ParamField path="item_type" type="string" required placeholder="file">
+  Tipo do item.
+</ParamField>
+
+Valores aceitos:
+
+| Valor | Descrição |
+| --- | --- |
+| `file` | Arquivo armazenado. |
+| `folder` | Pasta do armazenamento. |
+
+<ParamField path="item_id" type="string" required>
+  ID do arquivo ou pasta.
+</ParamField>
+
+## Corpo da requisição
+
+<ParamField body="name" type="string" required placeholder="contrato-assinado.pdf">
+  Novo nome do item.
+</ParamField>
+
+## Exemplo de corpo
+
+```json
+{
+  "name": "contrato-assinado.pdf"
+}
+```
+
+## Regras importantes
+
+- Arquivos só podem ser renomeados quando estiverem com status `uploaded`.
+- Pastas só podem ser renomeadas quando estiverem ativas.
+- Não é permitido repetir nome de item do mesmo tipo dentro da mesma pasta.

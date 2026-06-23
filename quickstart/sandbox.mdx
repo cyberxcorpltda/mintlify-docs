@@ -1,0 +1,122 @@
+---
+title: "Ambiente de teste"
+icon: "flask"
+description: "Veja como habilitar chamadas de teste usando o header x-ambient."
+sidebarTitle: "Ambiente de teste"
+keywords: ["sandbox", "ambiente de teste", "x-ambient", "consulta de teste", "lazy data"]
+---
+
+O **ambiente de teste** permite validar integrações com a Lazy Data sem consumir saldo da conta.
+
+Para executar uma chamada em modo de teste, envie o header:
+
+```http
+x-ambient: sandbox
+```
+
+## Como habilitar
+
+Inclua o header `x-ambient: sandbox` na requisição, junto com sua autenticação.
+
+```http
+POST /v1/search/person
+Authorization: Bearer SUA_CHAVE_DE_API
+Content-Type: application/json
+x-ambient: sandbox
+```
+
+Exemplo de corpo:
+
+```json
+{
+  "tax_id": "00000000000",
+  "mode": "sync",
+  "datasets": [
+    "person_basic_data"
+  ]
+}
+```
+
+## Produção
+
+Para executar chamadas reais, não envie o header `x-ambient: sandbox`.
+
+```http
+POST /v1/search/person
+Authorization: Bearer SUA_CHAVE_DE_API
+Content-Type: application/json
+```
+
+<Warning>
+  Chamadas em produção podem consumir saldo ou gerar cobrança, conforme os datasets e funcionalidades utilizados.
+</Warning>
+
+## Funcionalidades com suporte a teste
+
+Atualmente, o ambiente de teste está disponível para as seguintes funcionalidades:
+
+| Funcionalidade | Suporte |
+| --- | --- |
+| Consultas | Sim |
+| Validações | Sim |
+| Enriquecimentos | Não |
+| Monitoramentos | Não |
+| Armazenamento | Não |
+
+## Consultas
+
+As consultas podem ser executadas em ambiente de teste para validar payloads, autenticação e estrutura de retorno.
+
+```http
+POST /v1/search/company
+Authorization: Bearer SUA_CHAVE_DE_API
+Content-Type: application/json
+x-ambient: sandbox
+```
+
+```json
+{
+  "tax_id": "00000000000000",
+  "mode": "sync",
+  "datasets": [
+    "company_basic_data"
+  ]
+}
+```
+
+## Validações
+
+As validações também aceitam o header `x-ambient: sandbox`.
+
+Isso permite validar o envio dos dados e o formato da resposta sem cobrança real.
+
+```http
+POST /v1/validation/face-match
+Authorization: Bearer SUA_CHAVE_DE_API
+x-ambient: sandbox
+```
+
+<Info>
+  Mesmo em ambiente de teste, os dados enviados precisam respeitar as validações de formato, tamanho e obrigatoriedade.
+</Info>
+
+## Retorno
+
+O ambiente de teste mantém o mesmo padrão de resposta da API.
+
+```json
+{
+  "code": 200,
+  "message": "Operação realizada com sucesso.",
+  "result": {}
+}
+```
+
+O conteúdo de `result` pode ser simulado, controlado ou limitado, dependendo da funcionalidade e dos datasets utilizados.
+
+## Boas práticas
+
+- Use `x-ambient: sandbox` durante o desenvolvimento da integração.
+- Valide autenticação, payloads e tratamento de erros antes de ir para produção.
+- Não use respostas do ambiente de teste para decisões reais.
+- Remova o header `x-ambient: sandbox` ao executar chamadas em produção.

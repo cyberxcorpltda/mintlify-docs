@@ -1,0 +1,73 @@
+---
+title: "Validar processo"
+keywords: ["validar processo", "monitoramento processo", "court_code", "lazy data"]
+description: "Valide um processo no tribunal informado antes de criar o monitoramento."
+sidebarTitle: "Validar processo"
+api: "POST /v1/monitoring/process/validate"
+playground: "interactive"
+---
+
+Valida se o processo existe no tribunal informado e retorna os dados usados na criação do monitoramento.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Processo validado com sucesso.",
+  "result": {
+    "process": {
+      "process_number": "0000001-77.2026.8.26.0000",
+      "judicial_class": "Procedimento Comum Cível",
+      "subject": "Consulta processual",
+      "court": "TJSP",
+      "court_name": "Tribunal de Justiça de São Paulo",
+      "degree": "1"
+    },
+    "court": {
+      "code": "tjsp",
+      "acronym": "TJSP",
+      "name": "Tribunal de Justiça de São Paulo",
+      "group": "state"
+    },
+    "monitoring": {
+      "id": "process_datajud",
+      "type": "process",
+      "price_per_check": 0.03,
+      "frequencies": []
+    }
+  }
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Processo não encontrado."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="process_number" type="string" required>
+  Número do processo no padrão CNJ.
+</ParamField>
+
+<ParamField body="court_code" type="string" required placeholder="tjsp">
+  Sigla/código público do tribunal DataJud.
+</ParamField>
+
+<Note>
+  Se você não souber o `court_code`, use [Detectar tribunal](/api-reference/monitoring/process/detect-court) antes desta chamada.
+</Note>
+
+## Exemplo de corpo
+
+```json
+{
+  "process_number": "0000001-77.2026.8.26.0000",
+  "court_code": "tjsp"
+}
+```

@@ -1,0 +1,77 @@
+---
+title: "Monitoramento"
+keywords: ["monitoramento", "processos", "pessoa física", "pessoa jurídica", "alertas", "lazy data"]
+description: "Acompanhe processos, pessoas físicas e pessoas jurídicas com checagens recorrentes e alertas por e-mail."
+sidebarTitle: "Visão geral"
+---
+
+O **monitoramento** permite acompanhar mudanças em processos, pessoas físicas e pessoas jurídicas por meio de checagens recorrentes.
+
+Use esta funcionalidade quando você precisa receber alertas sobre novas movimentações processuais, mudanças em fontes cadastrais ou eventos relevantes em bases selecionadas.
+
+## Fluxo geral
+
+<Steps>
+  <Step title="Consulte a configuração">
+    Liste frequências, fontes disponíveis e preço por checagem para o tipo de monitoramento desejado.
+  </Step>
+  <Step title="Valide o alvo">
+    Valide CPF, CNPJ ou processo antes de criar o monitoramento.
+  </Step>
+  <Step title="Crie o monitoramento">
+    Informe fontes, frequência e e-mail de notificação.
+  </Step>
+  <Step title="Acompanhe eventos">
+    Use listagem e detalhe para acompanhar status, próximas checagens e últimos eventos.
+  </Step>
+</Steps>
+
+## Tipos disponíveis
+
+<Columns cols={3}>
+  <Card title="Processo" icon="gavel" href="/api-reference/monitoring/process/create">
+    Monitore um processo em um tribunal específico usando `court_code`.
+  </Card>
+
+  <Card title="Pessoa física" icon="user" href="/api-reference/monitoring/person/create">
+    Monitore CPF em fontes cadastrais e processuais disponíveis.
+  </Card>
+
+  <Card title="Pessoa jurídica" icon="building" href="/api-reference/monitoring/company/create">
+    Monitore CNPJ em fontes empresariais e processuais disponíveis.
+  </Card>
+</Columns>
+
+## Ações gerais
+
+| Recurso | Endpoint |
+| --- | --- |
+| Listar monitoramentos | `GET /v1/monitoring` |
+| Detalhar monitoramento | `GET /v1/monitoring/{monitoring_id}` |
+| Cancelar monitoramento | `DELETE /v1/monitoring/{monitoring_id}` |
+
+## Processo e tribunal
+
+Monitoramentos processuais exigem o campo `court_code`, que representa a sigla pública do tribunal no DataJud, como `tjsp`, `tjba`, `trf1`, `tst` ou `stj`.
+
+Quando você tem apenas o número CNJ do processo, use [Detectar tribunal](/api-reference/monitoring/process/detect-court) para obter o tribunal provável antes de validar ou criar o monitoramento.
+
+## Cobrança e eventos
+
+- Cada monitoramento possui preço por checagem.
+- A frequência define a quantidade estimada de checagens por mês.
+- Eventos são registrados quando a checagem identifica movimentações ou alterações relevantes.
+- O e-mail informado recebe notificações conforme a configuração do monitoramento.
+- Monitoramentos cancelados deixam de gerar novas checagens.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Listar monitoramentos" icon="list" href="/api-reference/monitoring/list">
+    Veja monitoramentos ativos da conta.
+  </Card>
+
+  <Card title="Detectar tribunal" icon="landmark" href="/api-reference/monitoring/process/detect-court">
+    Descubra o `court_code` provável a partir do número do processo.
+  </Card>
+</Columns>

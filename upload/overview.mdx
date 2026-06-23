@@ -1,0 +1,233 @@
+---
+title: "Visão geral"
+description: "Entenda o fluxo geral de upload de arquivos na Lazy Data."
+sidebarTitle: "Visão geral"
+keywords: ["upload de arquivos", "assinatura de upload", "upload seguro", "enriquecimento", "armazenamento", "lazy data"]
+---
+
+O **upload de arquivos** na Lazy Data usa um fluxo com assinatura temporária para garantir que cada envio seja autorizado antes de o arquivo ser recebido e processado.
+
+Esse fluxo é usado em recursos que precisam receber arquivos maiores ou arquivos que serão processados em segundo plano, como bases de enriquecimento e arquivos enviados ao armazenamento da conta.
+
+<Info>
+  O arquivo binário não é enviado para a URL base da API principal. Uploads usam o serviço dedicado `https://upload.lazydata.com.br`.
+</Info>
+
+## Onde o upload é usado
+
+Atualmente, o upload de arquivos é usado em dois fluxos principais:
+
+<Columns cols={2}>
+  <Card title="Enriquecimento" icon="layer-group" href="/upload/enrichment">
+    Envio de bases CSV, XLS ou XLSX para enriquecimento de CPF ou CNPJ.
+  </Card>
+
+  <Card title="Armazenamento" icon="folder-open" href="/upload/storage">
+    Envio de arquivos para o espaço de armazenamento da conta.
+  </Card>
+</Columns>
+
+## Como funciona
+
+O fluxo geral é dividido em etapas para separar autorização, envio do arquivo e processamento final.
+
+<Steps>
+  <Step title="Prepare o upload">
+    A aplicação chama a API principal para criar ou preparar o recurso que receberá o arquivo.
+  </Step>
+  <Step title="Receba a assinatura">
+    A resposta retorna uma assinatura temporária, a URL de upload e a data de expiração.
+  </Step>
+  <Step title="Envie o arquivo">
+    O arquivo é enviado em `multipart/form-data` para o domínio de upload usando a assinatura no header.
+  </Step>
+  <Step title="Acompanhe o processamento">
+    A Lazy Data valida, processa e registra o arquivo conforme o recurso de destino.
+  </Step>
+</Steps>
+
+## Domínios de upload
+
+Cada destino possui uma rota específica no serviço de upload.
+
+| Destino | Endpoint |
+| --- | --- |
+| Enriquecimento | `POST https://upload.lazydata.com.br/enrichment` |
+| Armazenamento | `POST https://upload.lazydata.com.br/storage` |
+
+<Warning>
+  Não envie arquivos para endpoints comuns da API principal. Use sempre o `upload_url` retornado na etapa de preparação.
+</Warning>
+
+## Assinatura temporária
+
+Antes de enviar um arquivo, é necessário obter uma assinatura de upload.
+
+A assinatura define:
+
+- conta responsável pelo envio;
+- recurso de destino;
+- validade da autorização;
+- operação permitida;
+- identificador relacionado ao upload;
+- nome esperado do arquivo;
+- contexto necessário para validação.
+
+A assinatura deve ser usada somente para o upload solicitado.
+
+## Header de assinatura
+
+A assinatura deve ser enviada no header:
+
+```http
+X-LazyData-Upload-Signature: <assinatura_de_upload>
+```
+
+<Warning>
+  O serviço de upload não usa `Authorization: Bearer`. A autenticação do envio é feita pela assinatura temporária.
+</Warning>
+
+## Envio do arquivo
+
+O arquivo deve ser enviado em `multipart/form-data`.
+
+O nome do campo do arquivo deve ser exatamente `file`.
+
+```bash
+curl --request POST \
+  --url "https://upload.lazydata.com.br/storage" \
+  --header "X-LazyData-Upload-Signature: <assinatura_de_upload>" \
+  --form "file=@./arquivo.pdf"
+```
+
+<Note>
+  Ao usar `FormData` no navegador, não defina manualmente o header `Content-Type`. O navegador adiciona o boundary correto do `multipart/form-data`.
+</Note>
+
+## Limite por arquivo
+
+O limite atual por arquivo é de até `1024 MB`, quando o destino permitir.
+
+```text
+Limite por arquivo: 1024 MB
+```
+
+Arquivos acima desse limite são recusados antes do processamento.
+
+<Warning>
+  O recurso de destino pode aplicar regras adicionais. Enriquecimento aceita apenas arquivos compatíveis com processamento de bases, enquanto armazenamento aceita mais tipos de arquivo conforme cota e política da conta.
+</Warning>
+
+## Validações realizadas
+
+Durante o upload, a Lazy Data pode validar:
+
+- assinatura enviada;
+- validade da assinatura;
+- permissão da conta;
+- recurso de destino;
+- nome do arquivo;
+- tamanho do arquivo;
+- formato permitido;
+- tipo de conteúdo;
+- integridade do arquivo;
+- duplicidade;
+- disponibilidade para processamento.
+
+As validações específicas dependem do tipo de upload.
+
+## Processamento em segundo plano
+
+Alguns uploads exigem processamento posterior.
+
+Exemplos:
+
+- análise de colunas em arquivos de enriquecimento;
+- cálculo de linhas processáveis;
+- identificação de CPF ou CNPJ;
+- armazenamento definitivo do arquivo;
+- registro de metadados;
+- atualização do status do recurso;
+- geração de arquivos finais.
+
+Nesses casos, a resposta inicial indica que o arquivo foi recebido, mas etapas dependentes devem aguardar o status correto do recurso.
+
+## Resposta padrão
+
+Quando o arquivo é aceito, a resposta segue o contrato base da Lazy Data.
+
+```json
+{
+  "code": 200,
+  "message": "Arquivo recebido com sucesso.",
+  "result": {
+    "id": "b3a1f6da-2c3e-47a1-95b3-2d51cf451111",
+    "status": "uploaded"
+  }
+}
+```
+
+Em enriquecimentos, a resposta pode usar `202` quando o arquivo é recebido e a análise continua em segundo plano.
+
+## Quando não usar upload
+
+Nem todo endpoint que recebe dados usa o fluxo de upload.
+
+| Caso | Recomendação |
+| --- | --- |
+| Imagens para comparação facial | Envie Base64 no endpoint de comparação facial. |
+| Documento pequeno aceito no corpo da requisição | Use o formato documentado no próprio endpoint. |
+| Consulta simples por CPF, CNPJ, placa ou processo | Envie parâmetros diretamente na requisição. |
+| Arquivo para enriquecimento ou armazenamento | Use assinatura temporária de upload. |
+
+## Falhas comuns
+
+Possíveis causas de falha no upload:
+
+- assinatura ausente;
+- assinatura inválida;
+- assinatura expirada;
+- arquivo acima do limite;
+- nome do arquivo diferente do nome assinado;
+- formato não permitido;
+- tipo de conteúdo incompatível;
+- recurso de destino não encontrado;
+- arquivo já enviado;
+- espaço insuficiente no armazenamento;
+- falha ao salvar no storage;
+- interrupção de conexão.
+
+<Card title="Códigos de erro de upload" icon="triangle-exclamation" horizontal href="/errors/upload">
+  Veja os erros possíveis durante assinatura, envio, validação e armazenamento de arquivos.
+</Card>
+
+## Boas práticas
+
+- Solicite uma nova assinatura antes de cada upload.
+- Não reutilize assinaturas expiradas, inválidas ou já usadas.
+- Não envie arquivos acima de `1024 MB`.
+- Mantenha a página aberta durante uploads grandes.
+- Use conexão estável para arquivos grandes.
+- Envie o arquivo com o mesmo nome usado na preparação.
+- Aguarde o status final antes de iniciar etapas dependentes do arquivo.
+- Não exponha assinaturas de upload em logs públicos.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Upload para enriquecimento" icon="layer-group" href="/upload/enrichment">
+    Veja o fluxo de envio de bases para enriquecimento.
+  </Card>
+
+  <Card title="Upload para armazenamento" icon="folder-open" href="/upload/storage">
+    Veja o fluxo de envio de arquivos para o armazenamento.
+  </Card>
+
+  <Card title="Endpoint de enriquecimento" icon="cloud-arrow-up" href="/api-reference/upload/enrichment">
+    Consulte a rota técnica de upload para bases de enriquecimento.
+  </Card>
+
+  <Card title="Endpoint de armazenamento" icon="folder-open" href="/api-reference/upload/storage">
+    Consulte a rota técnica de upload para arquivos do storage.
+  </Card>
+</Columns>

@@ -1,0 +1,339 @@
+---
+title: "Resultado assíncrono"
+description: "Consulte o andamento, resultado final e histórico técnico de uma consulta assíncrona."
+sidebarTitle: "Resultado assíncrono"
+api: "GET /v1/search/{target}/{history_id}"
+playground: "interactive"
+---
+
+Retorna o status atual e os dados disponíveis de uma consulta iniciada anteriormente em modo assíncrono.
+
+Use este endpoint para implementar polling após receber o `id` de uma consulta com status `queued` ou `processing`.
+
+Esse endpoint é voltado para polling logo após iniciar uma consulta assíncrona.
+
+<Info>
+  Para consultar histórico armazenado fora da janela curta de polling, use `GET /v1/search/history` e `GET /v1/search/history/{history_id}` com escopo `history`.
+</Info>
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Histórico da consulta retornado com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "processing",
+    "status_values": ["queued", "processing", "completed", "completed_with_errors", "failed"],
+    "target": "person",
+    "query": {
+      "taxid": "00000000000",
+      "datasets": ["person_basic_data"],
+      "additional": {}
+    },
+    "cost": {
+      "total": 0.05,
+      "refunded": 0,
+      "datasets": {
+        "person_basic_data": {
+          "charged": 0.05,
+          "refunded": 0
+        }
+      }
+    },
+    "timing": {
+      "total": 0.42,
+      "datasets": {
+        "person_basic_data": 0.42
+      }
+    },
+    "errors": {},
+    "cache": {},
+    "datasets_status": {
+      "person_basic_data": "processing"
+    },
+    "result": {},
+    "created_at": "2026-06-22T12:00:00Z",
+    "last_updated_at": "2026-06-22T12:00:01Z"
+  }
+}
+```
+
+```json 200
+{
+  "code": 200,
+  "message": "Histórico da consulta retornado com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "completed",
+    "status_values": ["queued", "processing", "completed", "completed_with_errors", "failed"],
+    "target": "company",
+    "query": {
+      "taxid": "00000000000000",
+      "datasets": ["company_basic_data"],
+      "additional": {}
+    },
+    "cost": {
+      "total": 0.05,
+      "refunded": 0,
+      "datasets": {
+        "company_basic_data": {
+          "charged": 0.05,
+          "refunded": 0
+        }
+      }
+    },
+    "timing": {
+      "total": 0.83,
+      "datasets": {
+        "company_basic_data": 0.83
+      }
+    },
+    "errors": {},
+    "cache": {},
+    "datasets_status": {
+      "company_basic_data": "completed"
+    },
+    "result": {
+      "company_basic_data": {
+        "tax_id": "00000000000000",
+        "name": "EMPRESA EXEMPLO LTDA",
+        "status": "ATIVA"
+      }
+    },
+    "created_at": "2026-06-22T12:00:00Z",
+    "last_updated_at": "2026-06-22T12:00:02Z"
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Tipo de consulta inválido."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso."
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "O histórico da consulta não foi encontrado."
+}
+```
+
+</ResponseExample>
+
+## Parâmetros
+
+<ParamField path="target" type="string" required placeholder="person">
+  Tipo da consulta assíncrona que será detalhada.
+</ParamField>
+
+Valores aceitos para `target`:
+
+| Valor | Descrição |
+| --- | --- |
+| `person` | Consulta de pessoa física. |
+| `pf` | Alias de `person`. |
+| `company` | Consulta de pessoa jurídica. |
+| `pj` | Alias de `company`. |
+| `process` | Consulta processual. |
+| `vehicle` | Consulta veicular. |
+
+<ParamField path="history_id" type="string" required placeholder="9fcb573b-7f62-4774-978b-07e89dfef5f2">
+  ID retornado ao iniciar a consulta assíncrona.
+</ParamField>
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta da API.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da resposta.
+</ResponseField>
+
+<ResponseField name="result" type="object">
+  Objeto principal com o status, dados da consulta, custos, tempos, erros e retorno dos datasets.
+</ResponseField>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador único da consulta. |
+| `status` | `string` | Status atual da consulta. |
+| `status_values` | `array<string>` | Lista de status possíveis para consultas assíncronas. |
+| `target` | `string` | Tipo público da consulta: `person`, `company`, `process` ou `vehicle`. |
+| `query` | `object` | Dados usados para iniciar a consulta. |
+| `cost` | `object` | Valores cobrados e estornados. |
+| `timing` | `object` | Tempo total e tempo individual por dataset, quando disponível. |
+| `errors` | `object` | Erros por dataset, quando ocorrerem. |
+| `cache` | `object` | Informações de cache por dataset, quando aplicável. |
+| `datasets_status` | `object` | Status individual de cada dataset solicitado. |
+| `result` | `object` | Resultado agrupado por dataset. Pode ficar vazio enquanto a consulta estiver em andamento. |
+| `created_at` | `string` | Data de criação da consulta em ISO 8601. |
+| `last_updated_at` | `string` | Data da última atualização da consulta em ISO 8601. |
+
+## Status da consulta
+
+| Status | Descrição |
+| --- | --- |
+| `queued` | Consulta criada e aguardando processamento. |
+| `processing` | Consulta em processamento. |
+| `completed` | Consulta finalizada. Verifique `errors` para identificar falhas parciais por dataset. |
+| `completed_with_errors` | Consulta finalizada com falhas parciais. Trate como status final e revise `errors` e `datasets_status`. |
+| `failed` | Consulta finalizada com falha geral. |
+
+<Note>
+  Trate `completed`, `completed_with_errors` e `failed` como status finais.
+</Note>
+
+## Estrutura de `query`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `taxid` | `string` | CPF ou CNPJ consultado, quando a consulta usa documento. |
+| `plate` | `string` | Placa consultada, quando a consulta é veicular. |
+| `datasets` | `array<string>` | Datasets solicitados na consulta. |
+| `additional` | `object` | Campos adicionais enviados por dataset. |
+
+## Estrutura de `cost`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `total` | `number` | Valor total efetivamente debitado. |
+| `refunded` | `number` | Valor total estornado. |
+| `datasets` | `object` | Detalhamento financeiro por dataset. |
+
+## Estrutura de `cost.datasets`
+
+Cada chave representa um dataset solicitado.
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `charged` | `number` | Valor cobrado pelo dataset. |
+| `refunded` | `number` | Valor estornado para o dataset. |
+
+## Estrutura de `timing`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `total` | `number` | Tempo total da consulta em segundos, quando disponível. |
+| `datasets` | `object` | Tempo individual por dataset em segundos. |
+
+## Estrutura de `errors`
+
+O campo `errors` retorna um objeto indexado pelo ID do dataset quando alguma base falha.
+
+```json
+{
+  "errors": {
+    "person_example_dataset": {
+      "code": 42025,
+      "message": "Não foi possível consultar o provedor da consulta."
+    }
+  }
+}
+```
+
+## Estrutura de `datasets_status`
+
+Objeto indexado pelo ID do dataset.
+
+```json
+{
+  "datasets_status": {
+    "person_basic_data": "completed",
+    "person_example_dataset": "failed"
+  }
+}
+```
+
+## Estrutura de `result.result`
+
+Objeto indexado pelo ID do dataset. Cada chave contém o retorno final do dataset correspondente.
+
+```json
+{
+  "result": {
+    "company_basic_data": {
+      "tax_id": "00000000000000",
+      "name": "EMPRESA EXEMPLO LTDA",
+      "status": "ATIVA"
+    }
+  }
+}
+```
+
+<Warning>
+  Campos descritos na estrutura dos datasets podem não aparecer em todas as consultas. A disponibilidade depende da fonte, do documento consultado e do dataset selecionado.
+</Warning>
+
+## Respostas esperadas
+
+| Status | Quando ocorre |
+| --- | --- |
+| `200` | Histórico encontrado e retornado com sucesso. |
+| `400` | O `target` informado não é aceito. |
+| `401` | A chave da API está ausente, inválida ou não pôde ser autenticada. |
+| `403` | A credencial não possui escopo de consulta, o plano não permite acesso ou há bloqueio financeiro. |
+| `404` | Consulta não encontrada ou fora da janela de leitura. |
+| `422` | Validação dos parâmetros de rota falhou no schema da API reference. |
+
+## Janela de leitura
+
+O resultado assíncrono fica disponível para leitura por uma janela limitada após a criação da consulta.
+
+Atualmente, a janela de leitura é de aproximadamente 30 minutos. Após esse período, a API pode retornar `404`.
+
+## Polling recomendado
+
+1. Inicie a consulta em modo assíncrono.
+2. Guarde o `id` retornado.
+3. Consulte este endpoint usando o `target` correspondente.
+4. Enquanto `status` for `queued` ou `processing`, repita a consulta com intervalo progressivo.
+5. Ao receber `completed`, `completed_with_errors` ou `failed`, pare o polling e trate `result`, `errors` e `datasets_status`.
+
+<Note>
+  Evite polling agressivo. Para consultas com múltiplos datasets ou processos, use intervalos maiores para reduzir carga desnecessária.
+</Note>
+
+## Relação com histórico
+
+O histórico de consultas usa o mesmo registro técnico gerado pela consulta assíncrona.
+
+Este endpoint detalha um item específico dentro da janela curta de polling. Para histórico completo da conta, use:
+
+```http
+GET /v1/search/history
+GET /v1/search/history/{history_id}
+```
+
+Para ver conceitos, filtros e interpretação dos campos, consulte:
+
+<Columns cols={2}>
+  <Card title="Listar histórico" icon="list" href="/api-reference/search/history-list">
+    Liste consultas anteriores com filtros e paginação.
+  </Card>
+
+  <Card title="Histórico de consultas" icon="history" href="/search/history">
+    Entenda status por dataset, custos, estornos e erros.
+  </Card>
+</Columns>

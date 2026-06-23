@@ -1,0 +1,127 @@
+---
+title: "Listar enriquecimentos"
+description: "Liste enriquecimentos da conta autenticada com paginação."
+sidebarTitle: "Listar enriquecimentos"
+api: "GET /v1/enrichment"
+playground: "interactive"
+keywords: ["listar enriquecimentos", "enrichment list", "api lazy data"]
+---
+
+Lista os enriquecimentos da conta autenticada, retornando status, progresso, análise, configuração, custos e saídas resumidas.
+
+Use esta rota para montar telas de histórico, acompanhamento e retomada de fluxos interrompidos.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Enriquecimentos carregados.",
+  "result": {
+    "items": [
+      {
+        "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+        "type": "pf",
+        "name": "Base de clientes",
+        "status": "waiting_configuration",
+        "status_label": "Aguardando configuração",
+        "status_badge": "warning",
+        "resume_step": "preview",
+        "file": {
+          "id": "5cfa31286c4a3c4a5d1e0dd1b6930c9d",
+          "name": "base-clientes.csv",
+          "extension": "csv",
+          "content_type": "text/csv",
+          "size": 24576,
+          "uploaded_at": "2026-06-22T12:00:00+00:00",
+          "total_rows": 120
+        },
+        "progress": {
+          "stage": "waiting_configuration",
+          "stage_label": "Arquivo pronto para mapeamento",
+          "percent": 100,
+          "uploaded_bytes": 24576,
+          "total_bytes": 24576,
+          "total_rows": 120,
+          "processed_rows": 0,
+          "enriched_documents": 0,
+          "invalid_documents": 0,
+          "not_found_documents": 0,
+          "failed_rows": 0
+        },
+        "created_at": "2026-06-22T11:59:40+00:00",
+        "last_updated_at": "2026-06-22T12:00:00+00:00"
+      }
+    ],
+    "total": 1,
+    "offset": 0,
+    "limit": 10,
+    "has_more": false
+  }
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso."
+}
+```
+
+</ResponseExample>
+
+## Parâmetros
+
+<ParamField query="offset" default="0" type="integer">
+  Posição inicial da listagem.
+</ParamField>
+
+<ParamField query="limit" default="10" type="integer">
+  Quantidade máxima de itens retornados. O limite máximo é `100`.
+</ParamField>
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da operação.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Objeto com itens e dados de paginação.
+</ResponseField>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `items` | `array<object>` | Enriquecimentos retornados. |
+| `total` | `integer` | Total de enriquecimentos encontrados. |
+| `offset` | `integer` | Posição inicial usada na consulta. |
+| `limit` | `integer` | Limite aplicado na consulta. |
+| `has_more` | `boolean` | Indica se existem mais itens após a página atual. |
+
+## Como paginar
+
+Quando `has_more` for `true`, faça uma nova chamada somando `offset + limit`.
+
+```text
+GET /v1/enrichment
+Query: offset=10&limit=10
+```
+
+## Próximo passo
+
+<Card title="Consultar status" icon="clock" horizontal href="/api-reference/enrichment/status">
+  Consulte um enriquecimento específico para acompanhar análise, progresso e saídas.
+</Card>

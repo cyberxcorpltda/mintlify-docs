@@ -1,0 +1,231 @@
+---
+title: "Visão geral"
+description: "Entenda como funciona o armazenamento de arquivos na Lazy Data."
+sidebarTitle: "Visão geral"
+keywords: ["armazenamento", "arquivos", "pastas", "upload", "download", "lazy data"]
+---
+
+O **armazenamento** permite organizar arquivos e bases dentro da conta Lazy Data em uma estrutura parecida com um explorador de arquivos.
+
+Com ele, é possível criar pastas, enviar arquivos, baixar documentos, renomear itens, excluir arquivos e manter materiais importantes disponíveis no painel ou via API.
+
+<Card title="API de armazenamento" icon="folder-open" horizontal href="/api-reference/storage/list-items">
+  Liste pastas, arquivos, breadcrumbs, paginação e uso atual do storage.
+</Card>
+
+## Para que serve
+
+Use o armazenamento para guardar arquivos relacionados à operação da conta, como:
+
+- bases usadas em enriquecimentos;
+- relatórios exportados;
+- documentos internos;
+- arquivos de apoio;
+- planilhas de trabalho;
+- evidências e materiais administrativos.
+
+<Info>
+  O armazenamento é separado dos endpoints comuns de consulta e validação. Ele serve para guardar e gerenciar arquivos da conta, não para enviar anexos diretamente a qualquer endpoint da API.
+</Info>
+
+## Estrutura
+
+Os arquivos são organizados em pastas.
+
+Cada conta possui seu próprio espaço de armazenamento, com limite configurado conforme plano ou regra interna da plataforma.
+
+A navegação funciona por caminho, semelhante a:
+
+```text
+Início / Documentos / Relatórios
+```
+
+Na API, esse caminho aparece em `breadcrumbs` durante a listagem dos itens.
+
+## Tipos de item
+
+O armazenamento possui dois tipos principais de item:
+
+| Tipo | Descrição |
+| --- | --- |
+| `folder` | Pasta usada para agrupar arquivos e outras pastas. |
+| `file` | Arquivo enviado pelo usuário e armazenado de forma segura. |
+
+## Fluxo principal
+
+<Steps>
+  <Step title="Liste ou crie uma pasta">
+    Use a raiz do armazenamento ou uma pasta existente como destino dos arquivos.
+  </Step>
+  <Step title="Prepare o upload">
+    Informe nome do arquivo e pasta de destino para receber `upload_url`, `signature`, expiração e limite.
+  </Step>
+  <Step title="Envie o arquivo">
+    Envie o binário para `https://upload.lazydata.com.br/storage` usando a assinatura temporária.
+  </Step>
+  <Step title="Use o arquivo">
+    Liste, baixe, renomeie ou exclua o item conforme necessário.
+  </Step>
+</Steps>
+
+## Capacidade
+
+O armazenamento informa o uso atual no objeto `summary` da listagem.
+
+```json
+{
+  "summary": {
+    "used_bytes": 24576,
+    "quota_bytes": 1073741824,
+    "available_bytes": 1073717248,
+    "usage_percent": 0.01,
+    "files": 1
+  }
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `used_bytes` | Espaço já utilizado. |
+| `quota_bytes` | Limite total disponível para a conta. |
+| `available_bytes` | Espaço ainda disponível. |
+| `usage_percent` | Percentual de uso. |
+| `files` | Quantidade de arquivos armazenados. |
+
+Use esses dados para exibir barra de progresso, alerta de cota e validação antes de novos uploads.
+
+## Upload de arquivos
+
+O envio de arquivos usa assinatura temporária.
+
+O fluxo é dividido em duas partes:
+
+1. Preparar upload na API principal.
+2. Enviar o arquivo para o serviço de upload.
+
+```text
+POST /v1/storage/uploads
+POST https://upload.lazydata.com.br/storage
+```
+
+<Warning>
+  O arquivo binário não é enviado para a URL base da API principal. O envio deve ser feito para `https://upload.lazydata.com.br/storage` com `multipart/form-data`.
+</Warning>
+
+Na etapa de envio, use o header:
+
+```http
+X-LazyData-Upload-Signature: <assinatura_de_upload>
+```
+
+O limite atual por arquivo é de até `1024 MB`, respeitando também o espaço disponível da conta.
+
+<Columns cols={2}>
+  <Card title="Preparar upload" icon="file-arrow-up" href="/api-reference/storage/prepare-upload">
+    Gere assinatura temporária e registro inicial do arquivo.
+  </Card>
+
+  <Card title="Enviar arquivo" icon="cloud-arrow-up" href="/api-reference/upload/storage">
+    Envie o arquivo para `upload.lazydata.com.br/storage`.
+  </Card>
+</Columns>
+
+## Status de arquivo
+
+Arquivos podem passar por diferentes status durante upload, uso e exclusão.
+
+| Status | Descrição |
+| --- | --- |
+| `waiting_upload` | Registro criado e aguardando envio do arquivo. |
+| `receiving_upload` | Upload em andamento. |
+| `uploaded` | Arquivo recebido e salvo com sucesso. |
+| `failed` | Upload falhou ou foi recusado. |
+| `deleting` | Exclusão solicitada e em processamento. |
+| `deleted` | Item excluído. |
+| `delete_failed` | Falha ao remover o arquivo do storage. |
+
+## Download
+
+Arquivos armazenados podem ser baixados por link temporário.
+
+O link é gerado pela API e deve ser usado dentro do prazo de validade retornado.
+
+<Card title="Gerar download" icon="download" horizontal href="/api-reference/storage/download-file">
+  Gere um link temporário para baixar um arquivo armazenado.
+</Card>
+
+<Note>
+  O download só está disponível para arquivos existentes e com status compatível, normalmente `uploaded`.
+</Note>
+
+## Renomear e excluir
+
+É possível renomear pastas e arquivos.
+
+Também é possível excluir itens. Quando uma pasta possui muitos arquivos ou subpastas, a exclusão pode ser executada em segundo plano para evitar travamentos e manter a operação segura.
+
+<Columns cols={2}>
+  <Card title="Renomear item" icon="pen-to-square" href="/api-reference/storage/rename-item">
+    Altere o nome de uma pasta ou arquivo.
+  </Card>
+
+  <Card title="Excluir item" icon="trash" href="/api-reference/storage/delete-item">
+    Inicie a exclusão de uma pasta ou arquivo.
+  </Card>
+</Columns>
+
+## Organização visual
+
+O painel exibe os itens em uma lista compacta, com ícones diferentes conforme tipo de item ou extensão do arquivo.
+
+Exemplos:
+
+- pasta;
+- imagem;
+- PDF;
+- planilha;
+- documento;
+- arquivo genérico.
+
+## Regras importantes
+
+- Cada conta possui sua própria cota de armazenamento.
+- O tamanho máximo por arquivo é `1024 MB`.
+- A listagem retorna até `100` itens por página.
+- Não é permitido manter dois arquivos com o mesmo nome na mesma pasta.
+- Não é permitido manter duas pastas com o mesmo nome na mesma pasta pai.
+- A assinatura de upload é temporária e deve ser usada apenas para o arquivo preparado.
+- Se o upload falhar ou a assinatura expirar, gere uma nova assinatura antes de tentar novamente.
+- Pastas com upload em andamento podem ter restrição temporária para exclusão.
+
+## Endpoints principais
+
+| Recurso | Endpoint |
+| --- | --- |
+| Listar itens | `GET /v1/storage/items` |
+| Criar pasta | `POST /v1/storage/folders` |
+| Preparar upload | `POST /v1/storage/uploads` |
+| Enviar arquivo | `POST https://upload.lazydata.com.br/storage` |
+| Gerar download | `GET /v1/storage/files/{file_id}/download` |
+| Renomear item | `PATCH /v1/storage/items/{item_type}/{item_id}` |
+| Excluir item | `DELETE /v1/storage/items/{item_type}/{item_id}` |
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Pastas e arquivos" icon="folder-tree" href="/storage/files-and-folders">
+    Veja como criar, navegar, renomear e excluir pastas e arquivos.
+  </Card>
+
+  <Card title="Upload e download" icon="cloud-arrow-up" href="/storage/upload-download">
+    Entenda como enviar e baixar arquivos pelo painel e pela API.
+  </Card>
+
+  <Card title="Permissões e limites" icon="shield-check" href="/storage/permissions-limits">
+    Consulte regras de acesso, tamanho máximo e limite de armazenamento.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/storage">
+    Consulte erros de cota, upload, download, pastas e arquivos.
+  </Card>
+</Columns>

@@ -1,0 +1,203 @@
+---
+title: "Busca avançada"
+description: "Busque pessoas jurídicas por razão social, nome fantasia, CNPJ, endereço, UF ou CEP."
+sidebarTitle: "Busca avançada"
+api: "POST https://api.lazydata.com.br/v1/search/company/advanced"
+playground: "interactive"
+---
+
+Executa uma busca avançada de pessoa jurídica em formato paginado.
+
+Use esta rota quando você não possui o CNPJ exato ou precisa localizar empresas por dados parciais, como razão social, nome fantasia, logradouro, UF ou CEP.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Consulta realizada com sucesso.",
+  "result": {
+    "items": [
+      {
+        "taxid": "00.000.000/0000-00",
+        "name": "EMPRESA EXEMPLO LTDA",
+        "fantasy": "EXEMPLO",
+        "location": "São Paulo/SP",
+        "status": "ATIVA",
+        "activity_start_date": "2020-01-15",
+        "address": "AVENIDA EXEMPLO, 100 - CENTRO - São Paulo - SP - 00000-000",
+        "uf": "SP",
+        "zipcode": "00000000",
+        "score": 18.4
+      }
+    ],
+    "has_more": false,
+    "page": 1,
+    "price": 0.09,
+    "charged": 0.09,
+    "debit_only_if_found": false,
+    "time": 0.42,
+    "test": false
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Um ou mais parâmetros informados são inválidos."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="taxid" type="string">
+  CNPJ da empresa. Pontuação é aceita e removida automaticamente.
+</ParamField>
+
+<ParamField body="name" type="string">
+  Razão social ou parte da razão social.
+</ParamField>
+
+<ParamField body="fantasy" type="string">
+  Nome fantasia ou parte do nome fantasia.
+</ParamField>
+
+<ParamField body="address" type="string">
+  Logradouro ou parte do endereço.
+</ParamField>
+
+<ParamField body="uf" type="string" placeholder="SP">
+  Sigla da unidade federativa com 2 letras.
+</ParamField>
+
+<ParamField body="zipcode" type="string" placeholder="01001000">
+  CEP com 8 dígitos. Pontuação é aceita e removida automaticamente.
+</ParamField>
+
+<ParamField body="similar_name" default="false" type="boolean">
+  Quando `true`, permite busca aproximada por razão social ou nome fantasia.
+</ParamField>
+
+<ParamField body="page" default="1" type="integer">
+  Página dos resultados. Use a próxima página enquanto `has_more` for `true`.
+</ParamField>
+
+<ParamField header="x-ambient" type="string" placeholder="sandbox">
+  Use `sandbox` para executar uma chamada de teste sem consumo de saldo.
+</ParamField>
+
+<Note>
+  Para detalhes sobre chamadas de teste, consulte [Ambiente de teste](/quickstart/sandbox).
+</Note>
+
+## Regras dos filtros
+
+É necessário informar pelo menos um dos campos aceitos: `taxid`, `name`, `fantasy`, `address` ou `zipcode`.
+
+Quando `taxid` for informado, ele deve conter um CNPJ válido após normalização.
+
+Quando `uf` for informado, ele deve conter uma sigla válida com 2 letras.
+
+## Exemplo de corpo
+
+```json
+{
+  "name": "EMPRESA EXEMPLO LTDA",
+  "uf": "SP",
+  "similar_name": true,
+  "page": 1
+}
+```
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta da API.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da resposta.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Objeto principal com os registros encontrados, dados de paginação, cobrança e tempo de execução.
+</ResponseField>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `items` | `array<object>` | Registros encontrados para os filtros enviados. |
+| `has_more` | `boolean` | Indica se existe próxima página disponível. |
+| `page` | `integer` | Página retornada. |
+| `price` | `number` | Preço da busca para a conta autenticada. |
+| `charged` | `number` | Valor debitado nesta chamada. Em sandbox, retorna `0`. |
+| `debit_only_if_found` | `boolean` | Indica se a cobrança ocorre apenas quando houver resultado útil. |
+| `time` | `number` | Tempo de execução em segundos. |
+| `test` | `boolean` | Indica se a chamada foi executada em ambiente de teste. |
+
+## Estrutura de `result.items[]`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `taxid` | `string` | CNPJ encontrado. |
+| `name` | `string` | Razão social. |
+| `fantasy` | `string` | Nome fantasia, quando disponível. |
+| `location` | `string` | Localização resumida, quando disponível. |
+| `status` | `string` | Situação cadastral. |
+| `activity_start_date` | `string` | Data de abertura ou início de atividade no formato `yyyy-mm-dd`, quando disponível. |
+| `address` | `string` | Endereço resumido, quando disponível. |
+| `uf` | `string` | UF. |
+| `zipcode` | `string` | CEP, quando disponível. |
+| `score` | `number` | Indicador de similaridade ou relevância do resultado, quando disponível. |
+
+<Warning>
+  Campos de `items[]` podem não ser retornados em todas as consultas. A disponibilidade depende dos filtros enviados e dos dados existentes para o registro encontrado.
+</Warning>
+
+## Paginação
+
+Quando `has_more` retornar `true`, envie a mesma requisição incrementando `page`.
+
+```json
+{
+  "name": "EMPRESA EXEMPLO LTDA",
+  "uf": "SP",
+  "similar_name": true,
+  "page": 2
+}
+```
+
+## Respostas esperadas
+
+| Status | Quando ocorre |
+| --- | --- |
+| `200` | Busca executada com sucesso. |
+| `400` | Requisição inválida, filtro ausente ou campo em formato incompatível. |
+| `401` | A chave da API está ausente, inválida ou não pôde ser autenticada. |
+| `403` | A credencial não possui escopo de consulta, o plano não permite acesso ou há bloqueio financeiro. |
+
+## Fluxo recomendado
+
+1. Envie os filtros mais específicos disponíveis.
+2. Use `similar_name: true` quando precisar aceitar variações de razão social ou nome fantasia.
+3. Leia `items` e verifique `has_more`.
+4. Se `has_more` for `true`, consulte a próxima página.
+5. Use `x-ambient: sandbox` para validar integração sem consumir saldo.

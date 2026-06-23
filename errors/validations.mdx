@@ -1,0 +1,82 @@
+---
+title: "Validações"
+description: "Erros relacionados a validações cadastrais, faciais, plano, cobrança e provedores."
+keywords: ["erro validação", "validação facial", "validação cadastral", "comparação facial", "códigos de erro lazy data"]
+sidebarTitle: "Validações"
+---
+
+Esta página lista os principais códigos de erro retornados pelos recursos de **validação** da Lazy Data.
+
+As validações incluem recursos como comparação facial, validação cadastral e demais verificações configuradas na plataforma.
+
+## Estrutura do erro
+
+```json
+{
+  "code": 43007,
+  "message": "Não foi possível consultar o provedor da validação.",
+  "result": null
+}
+```
+
+<info>
+  Para tratamento programático, utilize o campo `code`. A mensagem pode ser usada para logs, suporte ou exibição controlada na interface.
+</info>
+
+## Acesso, plano e cobrança
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `43001` | Não foi possível identificar um plano válido para a conta. | A conta não possui um plano válido ou o plano não foi localizado. |
+| `43002` | A funcionalidade de validação não está habilitada para a conta atual. | O plano atual não permite usar validações. |
+| `43006` | Não foi possível reservar o valor da validação. Verifique saldo disponível ou limite mensal. | Saldo insuficiente, limite mensal atingido ou falha ao reservar o valor da validação. |
+
+## Tipo de validação
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `43003` | A validação solicitada não foi encontrada. | O tipo de validação informado não existe. |
+| `43004` | A validação solicitada está inativa. | O tipo de validação existe, mas está desabilitado. |
+
+## Validação facial
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `43005` | Uma ou mais imagens informadas são inválidas. | A imagem está ausente, corrompida, fora do formato aceito ou excede as regras permitidas. |
+| `43010` | Não foi possível detectar uma face humana nas imagens enviadas. | O provedor não identificou uma face válida em uma ou mais imagens. |
+
+<warning>
+  Em validações faciais, envie imagens nítidas, com rosto visível, boa iluminação e sem cortes relevantes na face.
+</warning>
+
+## Validação cadastral
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `43011` | Dados cadastrais inválidos. | Os dados enviados não atendem aos requisitos mínimos para validação. |
+| `43012` | A validação cadastral de menores de idade não é permitida. | O CPF informado pertence a uma pessoa menor de idade. |
+| `43013` | Os dados deste CPF não estão disponíveis por restrição de privacidade prevista na LGPD. | O CPF possui restrição de privacidade. |
+
+## Provedor externo e histórico
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `43007` | Não foi possível consultar o provedor da validação. | Falha de comunicação, indisponibilidade, timeout ou erro temporário no provedor. |
+| `43008` | Não foi possível registrar o histórico da validação. | A validação foi processada, mas o histórico não pôde ser salvo. |
+
+## Tratamento recomendado
+
+<Steps>
+  <Step title="Valide os campos antes de enviar">
+    Confira documentos, imagens obrigatórias e dados mínimos antes de iniciar a validação.
+  </Step>
+  <Step title="Trate erros de plano e saldo">
+    Para códigos como `43002` e `43006`, direcione o usuário para alterar o plano, adicionar saldo ou revisar limites da conta.
+  </Step>
+  <Step title="Oriente o usuário sobre imagens inválidas">
+    Para códigos como `43005` e `43010`, solicite uma nova imagem com rosto visível, boa qualidade e formato aceito.
+  </Step>
+  <Step title="Use retry apenas para falhas temporárias">
+    O código `43007` pode representar falha temporária de provedor. Use retry com intervalo progressivo.
+  </Step>
+</Steps>

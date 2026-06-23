@@ -1,72 +1,322 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "Lazy Data",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#7367F0",
+    "light": "#9B92FF",
+    "dark": "#5145CD"
   },
-  "favicon": "/favicon.svg",
+  "favicon": {
+    "light": "/images/lazydata_icon.ico",
+    "dark": "/images/lazydata_icon.ico"
+  },
   "navigation": {
-    "pages": [
+    "tabs": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
+        "tab": "Documentação",
+        "groups": [
+          {
+            "group": "Primeiros passos",
+            "pages": [
+              "quickstart/introduction",
+              "quickstart/credentials",
+              "quickstart/authentication",
+              "quickstart/sandbox"
+            ]
+          },
+          {
+            "group": "Utilidades",
+            "pages": [
+              {
+                "group": "Códigos de erro",
+                "icon": "triangle-exclamation",
+                "pages": [
+                  "errors/overview",
+                  "errors/search",
+                  "errors/validations",
+                  "errors/enrichments",
+                  "errors/monitoring",
+                  "errors/storage",
+                  "errors/upload"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Funcionalidades",
+            "pages": [
+              {
+                "group": "Consultas",
+                "icon": "magnifying-glass",
+                "pages": [
+                  "search/overview",
+                  "search/person",
+                  "search/company",
+                  "search/process",
+                  "search/vehicle"
+                ]
+              },
+              {
+                "group": "Validações",
+                "icon": "shield-check",
+                "pages": [
+                  "validation/overview",
+                  "validation/face-comparison",
+                  "validation/registration"
+                ]
+              },
+              {
+                "group": "Enriquecimento",
+                "icon": "layer-group",
+                "pages": [
+                  "enrichment/overview",
+                  "enrichment/create",
+                  "enrichment/files",
+                  "enrichment/execution"
+                ]
+              },
+              {
+                "group": "Monitoramento",
+                "icon": "bell",
+                "pages": [
+                  "monitoring/overview",
+                  "monitoring/process",
+                  "monitoring/person",
+                  "monitoring/company",
+                  "monitoring/events"
+                ]
+              },
+              {
+                "group": "Armazenamento",
+                "icon": "folder-open",
+                "pages": [
+                  "storage/overview",
+                  "storage/files-and-folders",
+                  "storage/upload-download",
+                  "storage/permissions-limits"
+                ]
+              },
+              {
+                "group": "Upload de arquivos",
+                "icon": "cloud-upload",
+                "pages": [
+                  "upload/overview",
+                  "upload/enrichment",
+                  "upload/storage"
+                ]
+              },
+              "search/history"
+            ]
+          }
+        ],
+        "icon": "file-alt"
+      },
+      {
+        "tab": "API reference",
+        "groups": [
+          {
+            "group": "Documentação",
+            "pages": [
+              "api-reference/introduction"
+            ]
+          },
+          {
+            "group": "Consultas",
+            "pages": [
+              "api-reference/search/datasets",
+              "api-reference/search/async-result",
+              "api-reference/search/history-list",
+              "api-reference/search/history-detail",
+              {
+                "group": "Pessoa física",
+                "icon": "user",
+                "pages": [
+                  "api-reference/search/person/by-cpf",
+                  "api-reference/search/person/advanced",
+                  "api-reference/search/person/phone",
+                  "api-reference/search/person/email"
+                ]
+              },
+              {
+                "group": "Pessoa jurídica",
+                "icon": "building",
+                "pages": [
+                  "api-reference/company/by-cnpj",
+                  "api-reference/company/advanced",
+                  "api-reference/company/phone",
+                  "api-reference/company/email"
+                ]
+              },
+              {
+                "group": "Processos",
+                "icon": "gavel",
+                "pages": [
+                  "api-reference/search/process"
+                ]
+              },
+              {
+                "group": "Veículos",
+                "icon": "car",
+                "pages": [
+                  "api-reference/vehicle/plate"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Validações",
+            "pages": [
+              "comparacao-facial",
+              "validacao-cadastral"
+            ],
+            "icon": "shield-check"
+          },
+          {
+            "group": "Monitoramento",
+            "icon": "bell",
+            "pages": [
+              "api-reference/monitoring/overview",
+              "api-reference/monitoring/list",
+              "api-reference/monitoring/detail",
+              "api-reference/monitoring/cancel",
+              {
+                "group": "Processo",
+                "icon": "gavel",
+                "pages": [
+                  "api-reference/monitoring/process/config",
+                  "api-reference/monitoring/process/detect-court",
+                  "api-reference/monitoring/process/validate",
+                  "api-reference/monitoring/process/create"
+                ]
+              },
+              {
+                "group": "Pessoa física",
+                "icon": "user",
+                "pages": [
+                  "api-reference/monitoring/person/config",
+                  "api-reference/monitoring/person/validate",
+                  "api-reference/monitoring/person/create"
+                ]
+              },
+              {
+                "group": "Pessoa jurídica",
+                "icon": "building",
+                "pages": [
+                  "api-reference/monitoring/company/config",
+                  "api-reference/monitoring/company/validate",
+                  "api-reference/monitoring/company/create"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Enriquecimento",
+            "icon": "layer-group",
+            "pages": [
+              "api-reference/enrichment/overview",
+              "api-reference/enrichment/datasets",
+              "api-reference/enrichment/create",
+              "api-reference/enrichment/list",
+              "api-reference/enrichment/status",
+              "api-reference/enrichment/configure",
+              "api-reference/enrichment/output-files"
+            ]
+          },
+          {
+            "group": "Armazenamento",
+            "icon": "folder-open",
+            "pages": [
+              "api-reference/storage/overview",
+              "api-reference/storage/list-items",
+              "api-reference/storage/create-folder",
+              "api-reference/storage/prepare-upload",
+              "api-reference/storage/download-file",
+              "api-reference/storage/rename-item",
+              "api-reference/storage/delete-item"
+            ]
+          },
+          {
+            "group": "Upload de arquivos",
+            "icon": "cloud-upload",
+            "pages": [
+              "api-reference/upload/overview",
+              "api-reference/upload/enrichment",
+              "api-reference/upload/storage"
+            ]
+          }
+        ],
+        "icon": "code"
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/images/lazy_data_logo_with_name_black.png",
+    "dark": "/images/lazy_data_logo_with_name_white.png",
+    "href": "https://lazydata.com.br"
   },
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:support@lazydata.com.br",
+        "label": "Suporte"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "label": "Painel",
+      "href": "https://app.lazydata.com.br"
     }
   },
   "contextual": {
     "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
+     "copy",
+     "view",
+     "chatgpt",
+     "claude",
+     "perplexity",
+     "mcp",
+     "cursor",
+     "vscode"
+   ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "instagram": "https://instagram.com/cyberxcorp_"
     }
+  },
+  "description": "Lazy Data centraliza consultas, validações, enriquecimento de dados, monitoramento e armazenamento em uma plataforma segura para empresas que precisam tomar decisões com dados confiáveis.",
+  "icons": {
+    "library": "fontawesome"
+  },
+  "fonts": {
+    "family": "Manrope"
+  },
+  "api": {
+    "playground": {
+      "display": "interactive",
+      "proxy": true
+    },
+    "examples": {
+      "prefill": false,
+      "autogenerate": true
+    },
+    "url": "full",
+    "mdx": {
+      "auth": {
+        "method": "bearer",
+        "name": "Authorization"
+      },
+      "server": "https://api.lazydata.com.br/"
+    }
+  },
+  "seo": {
+    "metatags": {
+      "title": "Lazy Data Docs",
+      "description": "Documentação oficial da Lazy Data para consultas, validações, enriquecimento, monitoramento, armazenamento e integrações via API.",
+      "keywords": "Lazy Data, documentação API, consulta CPF, consulta CNPJ, validação cadastral, enriquecimento de dados, monitoramento processual",
+      "author": "Lazy Data"
+    },
+    "indexing": "navigable"
   }
 }

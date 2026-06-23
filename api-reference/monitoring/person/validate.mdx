@@ -1,0 +1,54 @@
+---
+title: "Validar pessoa física"
+keywords: ["validar monitoramento cpf", "pessoa física", "monitoramento", "lazy data"]
+description: "Valide se um CPF pode ser monitorado antes da criação."
+sidebarTitle: "Validar"
+api: "POST /v1/monitoring/person/validate"
+playground: "interactive"
+---
+
+Valida se o CPF informado pode ser monitorado.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Pessoa física validada para monitoramento.",
+  "result": {
+    "valid": true
+  }
+}
+```
+
+```json 400
+{
+  "code": 42038,
+  "message": "CPF inválido."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="name" type="string" required>
+  Nome da pessoa ou identificador interno para validação.
+</ParamField>
+
+<ParamField body="tax_id" type="string" required placeholder="00000000000">
+  CPF da pessoa, com ou sem pontuação.
+</ParamField>
+
+## Exemplo de corpo
+
+```json
+{
+  "name": "PESSOA EXEMPLO DOS SANTOS",
+  "tax_id": "00000000000"
+}
+```
+
+<Warning>
+  CPFs com restrição legal, menores de idade ou marcados por política interna podem não ser aceitos para monitoramento.
+</Warning>

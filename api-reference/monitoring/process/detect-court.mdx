@@ -1,0 +1,69 @@
+---
+title: "Detectar tribunal"
+keywords: ["detectar tribunal", "court_code", "datajud", "processo", "monitoramento"]
+description: "Detecte o tribunal provável de um processo e obtenha o court_code para monitoramento."
+sidebarTitle: "Detectar tribunal"
+api: "POST /v1/monitoring/process/detect-court"
+playground: "interactive"
+---
+
+Identifica o tribunal provável a partir do número CNJ do processo.
+
+Use esta rota quando você ainda não sabe qual `court_code` enviar nas rotas de validação e criação do monitoramento processual.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Tribunal identificado com sucesso.",
+  "result": {
+    "process_number": "0000001-77.2026.8.26.0000",
+    "normalized_process_number": "00000017720268260000",
+    "justice_segment": "8",
+    "justice_segment_name": "Justiça Estadual",
+    "court_code": "26",
+    "origin_code": "0000",
+    "court": {
+      "code": "tjsp",
+      "acronym": "TJSP",
+      "name": "Tribunal de Justiça de São Paulo",
+      "group": "state"
+    },
+    "candidates": [
+      {
+        "code": "tjsp",
+        "acronym": "TJSP",
+        "name": "Tribunal de Justiça de São Paulo",
+        "group": "state"
+      }
+    ]
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Número do processo inválido."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="process_number" type="string" required placeholder="0000001-77.2026.8.26.0000">
+  Número do processo no padrão CNJ, com ou sem pontuação.
+</ParamField>
+
+## Como usar o resultado
+
+Use `result.court.code` como `court_code` nas rotas:
+
+- [Validar processo](/api-reference/monitoring/process/validate)
+- [Criar monitoramento](/api-reference/monitoring/process/create)
+
+<Warning>
+  A detecção é baseada na estrutura do número CNJ. Em casos ambíguos, valide o processo com o `court_code` retornado antes de criar o monitoramento.
+</Warning>

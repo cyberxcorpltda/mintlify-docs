@@ -1,0 +1,297 @@
+---
+title: "Armazenamento"
+description: "Entenda o upload de arquivos para o armazenamento da conta."
+sidebarTitle: "Armazenamento"
+keywords: ["upload armazenamento", "storage", "arquivos", "pastas", "assinatura de upload", "lazy data"]
+---
+
+O upload para **armazenamento** é usado para enviar arquivos ao espaço de arquivos da conta Lazy Data.
+
+Após o upload, o arquivo fica disponível na pasta selecionada e pode ser baixado, renomeado ou excluído pelo painel ou pela API.
+
+<Card title="Endpoint técnico" icon="cloud-arrow-up" horizontal href="/api-reference/upload/storage">
+  Consulte parâmetros, exemplos e respostas da rota de upload para armazenamento.
+</Card>
+
+## Endpoint
+
+```http
+POST https://upload.lazydata.com.br/storage
+```
+
+<Warning>
+  Este endpoint não usa a URL base da API principal. O arquivo deve ser enviado para `https://upload.lazydata.com.br/storage`.
+</Warning>
+
+## Header obrigatório
+
+A requisição deve enviar a assinatura temporária de upload no header:
+
+```http
+X-LazyData-Upload-Signature: <assinatura_de_upload>
+```
+
+<Warning>
+  O upload não usa `Authorization: Bearer`. A autenticação do envio é feita pela assinatura retornada na preparação do upload.
+</Warning>
+
+## Como obter a assinatura
+
+A assinatura é gerada antes do upload pela API principal ou pelo painel.
+
+Pela API, a preparação do upload usa:
+
+```text
+POST /v1/storage/uploads
+```
+
+Essa etapa cria o registro inicial do arquivo com status `waiting_upload` e retorna:
+
+| Campo | Descrição |
+| --- | --- |
+| `upload_url` | URL do serviço de upload. Para armazenamento, usa `https://upload.lazydata.com.br/storage`. |
+| `signature` | Assinatura temporária usada no header `X-LazyData-Upload-Signature`. |
+| `signature_expires_at` | Data de expiração da assinatura. |
+| `max_size` | Tamanho máximo aceito para o arquivo. |
+| `file` | Metadados iniciais do arquivo preparado. |
+
+<Card title="Preparar upload" icon="file-arrow-up" horizontal href="/api-reference/storage/prepare-upload">
+  Gere a assinatura temporária e o registro inicial do arquivo.
+</Card>
+
+<Note>
+  A assinatura deve ser usada somente para o arquivo preparado. Se expirar ou o upload falhar, gere uma nova assinatura.
+</Note>
+
+## Pasta de destino
+
+O arquivo é salvo na pasta definida na preparação do upload.
+
+Use `parent_id` para indicar a pasta de destino:
+
+```json
+{
+  "name": "relatorio.pdf",
+  "parent_id": "1e6c59aa-1b8e-4cf8-becb-49b2c1111111"
+}
+```
+
+Quando `parent_id` for `null`, o arquivo será enviado para a raiz do armazenamento.
+
+Se a pasta de destino não existir, estiver indisponível ou não pertencer à conta autorizada, o upload é recusado.
+
+## Envio do arquivo
+
+O arquivo deve ser enviado em `multipart/form-data`.
+
+O nome do campo do arquivo deve ser exatamente `file`.
+
+```bash
+curl --request POST \
+  --url "https://upload.lazydata.com.br/storage" \
+  --header "X-LazyData-Upload-Signature: <assinatura_de_upload>" \
+  --form "file=@./relatorio.pdf"
+```
+
+Exemplo com JavaScript:
+
+```javascript
+const formData = new FormData();
+formData.append("file", file, file.name);
+
+const response = await fetch("https://upload.lazydata.com.br/storage", {
+  method: "POST",
+  headers: {
+    "X-LazyData-Upload-Signature": uploadSignature
+  },
+  body: formData
+});
+
+const data = await response.json();
+```
+
+<Note>
+  Ao usar `FormData` no navegador, não defina manualmente o header `Content-Type`. O navegador adiciona o boundary correto do `multipart/form-data`.
+</Note>
+
+## Limite por arquivo
+
+Cada arquivo pode ter até `1024 MB`.
+
+```text
+Limite por arquivo: 1024 MB
+```
+
+Arquivos acima desse limite são recusados.
+
+Também é necessário que a conta tenha espaço disponível suficiente para armazenar o arquivo.
+
+<Card title="Permissões e limites" icon="shield-check" horizontal href="/storage/permissions-limits">
+  Consulte limite por arquivo, cota da conta, subcontas e regras de acesso.
+</Card>
+
+## Tipos de arquivo
+
+O armazenamento aceita diferentes tipos de arquivo, desde que respeitem o limite de tamanho, a cota da conta e as regras de segurança.
+
+O tipo MIME é normalizado a partir do arquivo enviado. Quando o navegador envia `application/octet-stream`, a API pode inferir o tipo com base no nome do arquivo.
+
+Exemplos comuns:
+
+| Tipo | Extensões comuns |
+| --- | --- |
+| Imagem | `.jpg`, `.jpeg`, `.png`, `.webp` |
+| PDF | `.pdf` |
+| Planilha | `.csv`, `.xls`, `.xlsx` |
+| Documento | `.doc`, `.docx`, `.txt` |
+| Compactado | `.zip`, `.rar`, `.7z` |
+| Genérico | Outros formatos permitidos |
+
+## Validações realizadas
+
+Durante o upload, a Lazy Data valida:
+
+- assinatura temporária;
+- validade da assinatura;
+- conta responsável;
+- pasta de destino;
+- limite de armazenamento da conta;
+- tamanho do arquivo;
+- nome do arquivo;
+- tipo de conteúdo;
+- integridade inicial;
+- duplicidade na pasta;
+- status do registro preparado.
+
+<Warning>
+  O arquivo enviado precisa manter o mesmo nome usado para gerar a assinatura. Se o nome for diferente, o upload pode ser recusado.
+</Warning>
+
+## Registro do arquivo
+
+Após o upload, a Lazy Data registra os metadados finais do arquivo.
+
+Exemplo de metadados:
+
+```json
+{
+  "id": "8c30d4a1-b1ac-4d18-a8f9-b4cb77771111",
+  "type": "file",
+  "name": "relatorio.pdf",
+  "parent_id": "1e6c59aa-1b8e-4cf8-becb-49b2c1111111",
+  "extension": "pdf",
+  "content_type": "application/pdf",
+  "size": 187392,
+  "status": "uploaded",
+  "uploaded_at": "2026-06-21T12:00:00+00:00"
+}
+```
+
+## Resposta de upload concluído
+
+Quando o arquivo é salvo com sucesso, a API retorna:
+
+```json
+{
+  "code": 200,
+  "message": "Arquivo enviado.",
+  "result": {
+    "id": "8c30d4a1-b1ac-4d18-a8f9-b4cb77771111",
+    "type": "file",
+    "name": "relatorio.pdf",
+    "parent_id": "1e6c59aa-1b8e-4cf8-becb-49b2c1111111",
+    "extension": "pdf",
+    "content_type": "application/pdf",
+    "size": 187392,
+    "status": "uploaded"
+  }
+}
+```
+
+## Status de upload
+
+| Status | Descrição |
+| --- | --- |
+| `waiting_upload` | Registro criado e aguardando envio do arquivo. |
+| `receiving_upload` | Upload em andamento. |
+| `uploaded` | Arquivo recebido e salvo com sucesso. |
+| `failed` | Upload falhou ou foi recusado. |
+
+## Disponibilidade no painel
+
+Após o upload, o arquivo aparece na pasta de destino com status `uploaded`.
+
+No painel, é possível:
+
+- baixar o arquivo;
+- renomear o arquivo;
+- excluir o arquivo;
+- organizar arquivos em pastas;
+- visualizar metadados básicos.
+
+<Card title="Pastas e arquivos" icon="folder-tree" horizontal href="/storage/files-and-folders">
+  Veja como navegar, organizar, renomear e excluir itens no armazenamento.
+</Card>
+
+## Download
+
+Arquivos enviados ao armazenamento podem ser baixados por link temporário.
+
+```text
+GET /v1/storage/files/{file_id}/download
+```
+
+<Card title="Gerar download" icon="download" horizontal href="/api-reference/storage/download-file">
+  Gere um link temporário para baixar um arquivo armazenado.
+</Card>
+
+## Falhas comuns
+
+Possíveis falhas no upload para armazenamento:
+
+- assinatura ausente, inválida ou expirada;
+- pasta de destino não encontrada;
+- arquivo acima de `1024 MB`;
+- limite de armazenamento excedido;
+- espaço disponível insuficiente;
+- nome de arquivo duplicado na pasta;
+- nome do arquivo diferente do nome assinado;
+- arquivo vazio ou inválido;
+- upload já enviado para o registro preparado;
+- falha ao receber ou salvar o arquivo;
+- conexão interrompida.
+
+<Card title="Códigos de erro de upload" icon="triangle-exclamation" horizontal href="/errors/upload">
+  Veja os erros possíveis durante assinatura, envio e armazenamento do arquivo.
+</Card>
+
+## Boas práticas
+
+- Envie arquivos para a pasta correta.
+- Use nomes claros e objetivos.
+- Verifique `summary.available_bytes` antes de arquivos grandes.
+- Evite enviar arquivos duplicados na mesma pasta.
+- Aguarde o upload finalizar antes de atualizar a página.
+- Gere uma nova assinatura quando o upload falhar ou expirar.
+- Não exponha assinaturas de upload em logs públicos.
+- Renomeie arquivos quando necessário para facilitar a organização.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Armazenamento" icon="folder-open" href="/storage/overview">
+    Entenda como organizar pastas, arquivos e limites de armazenamento.
+  </Card>
+
+  <Card title="Upload e download" icon="cloud-arrow-up" href="/storage/upload-download">
+    Veja o fluxo completo de envio e download de arquivos.
+  </Card>
+
+  <Card title="Endpoint de upload" icon="cloud-arrow-up" href="/api-reference/upload/storage">
+    Consulte a documentação técnica da rota de upload.
+  </Card>
+
+  <Card title="Preparar upload" icon="file-arrow-up" href="/api-reference/storage/prepare-upload">
+    Gere assinatura temporária para envio.
+  </Card>
+</Columns>

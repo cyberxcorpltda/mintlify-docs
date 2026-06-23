@@ -1,0 +1,139 @@
+---
+title: "Criar enriquecimento"
+description: "Crie ou prepare um enriquecimento e gere a assinatura temporária para upload do arquivo."
+sidebarTitle: "Criar enriquecimento"
+api: "POST /v1/enrichment"
+playground: "interactive"
+keywords: ["criar enriquecimento", "assinatura upload", "enrichment api", "lazy data"]
+---
+
+Cria ou prepara um enriquecimento e retorna uma assinatura temporária para enviar o arquivo de entrada no serviço de upload.
+
+Depois de receber `upload_url` e `signature`, envie o arquivo em [Upload para enriquecimento](/api-reference/upload/enrichment).
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Assinatura de upload gerada.",
+  "result": {
+    "enrichment_id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "type": "pf",
+    "name": "Base de clientes",
+    "status": "waiting_upload",
+    "upload_url": "https://upload.lazydata.com.br/enrichment",
+    "signature": "<assinatura_de_upload>",
+    "signature_expires_at": "2026-06-22T14:00:00+00:00",
+    "file": {
+      "name": "base-clientes.csv",
+      "extension": "csv"
+    }
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Um ou mais parâmetros informados são inválidos."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso."
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "O arquivo deste enriquecimento já foi enviado."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="type" type="string" required placeholder="pf">
+  Tipo da base enviada. Use `pf` para CPF ou `pj` para CNPJ.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Nome do enriquecimento.
+</ParamField>
+
+<ParamField body="file" type="object" required>
+  Metadados do arquivo que será enviado no serviço de upload.
+</ParamField>
+
+<ParamField body="enrichment_id" type="string">
+  ID de um enriquecimento existente ainda sem arquivo. Use apenas quando precisar gerar uma nova assinatura para um enriquecimento já criado.
+</ParamField>
+
+## Estrutura de `file`
+
+| Campo | Tipo | Obrigatório | Descrição |
+| --- | --- | --- | --- |
+| `name` | `string` | Sim | Nome do arquivo que será enviado. |
+| `extension` | `string` | Sim | Extensão do arquivo. Valores aceitos: `csv`, `xls` ou `xlsx`. |
+
+## Exemplo de corpo
+
+```json
+{
+  "type": "pf",
+  "name": "Base de clientes",
+  "file": {
+    "name": "base-clientes.csv",
+    "extension": "csv"
+  }
+}
+```
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da operação.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Dados do enriquecimento criado e assinatura temporária de upload.
+</ResponseField>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `enrichment_id` | `string` | Identificador do enriquecimento. |
+| `type` | `string` | Tipo do enriquecimento: `pf` ou `pj`. |
+| `name` | `string` | Nome do enriquecimento. |
+| `status` | `string` | Status inicial. Normalmente `waiting_upload`. |
+| `upload_url` | `string` | URL do serviço de upload. |
+| `signature` | `string` | Assinatura temporária usada no header `X-LazyData-Upload-Signature`. |
+| `signature_expires_at` | `string` | Data de expiração da assinatura em ISO 8601. |
+| `file` | `object` | Metadados do arquivo esperado. |
+
+<Warning>
+  A assinatura é temporária. Se expirar antes do envio, gere uma nova assinatura usando o mesmo `enrichment_id`.
+</Warning>
+
+## Próximo passo
+
+<Card title="Enviar arquivo" icon="cloud-arrow-up" horizontal href="/api-reference/upload/enrichment">
+  Use `upload_url` e `signature` para enviar o arquivo no serviço de upload.
+</Card>

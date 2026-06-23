@@ -1,0 +1,262 @@
+---
+title: "Validação cadastral"
+keywords: ["validação cadastral", "validação cpf", "validação cnpj", "score cadastral", "antifraude", "lazy data"]
+description: "Compare dados informados com dados de referência e receba score, divergências e ação recomendada."
+sidebarTitle: "Validação cadastral"
+---
+
+A **validação cadastral** compara os dados enviados na requisição com dados disponíveis na base e retorna uma decisão estruturada com score, status, campos comparados e ação recomendada.
+
+Use esta funcionalidade em cadastros, onboarding, revisão de clientes, atualização cadastral, análise antifraude e fluxos que precisam identificar divergências entre o que foi informado pelo usuário e os dados de referência.
+
+<Card title="Endpoint da API" icon="shield-check" horizontal href="/api-reference/validation/registration">
+  Veja parâmetros, exemplos de resposta e regras técnicas da rota de validação cadastral.
+</Card>
+
+## Como funciona
+
+A validação recebe um CPF ou CNPJ e dados cadastrais complementares.
+
+```json
+{
+  "model": "pf",
+  "document": "00000000000",
+  "name": "PESSOA EXEMPLO DOS SANTOS",
+  "birthdate": "1990-01-01",
+  "mother_name": "MARIA EXEMPLO DOS SANTOS",
+  "email": "contato@example.com",
+  "phone": "11999990000"
+}
+```
+
+A API normaliza os dados, consulta a referência disponível e compara campo a campo. O retorno consolida a decisão em `result.registration`.
+
+## Modelos disponíveis
+
+| Modelo | Quando usar |
+| --- | --- |
+| `pf` | Validação de pessoa física por CPF. |
+| `pj` | Validação de pessoa jurídica por CNPJ. |
+
+## Quando usar
+
+| Caso | Uso recomendado |
+| --- | --- |
+| Cadastro novo | Verificar se nome, documento e data principal são compatíveis. |
+| Onboarding antifraude | Identificar divergências críticas antes de liberar acesso. |
+| Revisão manual | Entregar score e divergências para decisão operacional. |
+| Atualização cadastral | Confirmar dados alterados pelo usuário. |
+| Cadastro PJ | Comparar razão social, nome fantasia, abertura e contatos. |
+
+## Dados analisados
+
+| Campo | PF | PJ | Função |
+| --- | --- | --- | --- |
+| `document` | CPF | CNPJ | Identificador principal do cadastro. |
+| `name` | Nome da pessoa | Razão social | Campo principal de identidade. |
+| `birthdate` | Data de nascimento | Não aplicável | Confirmação forte para PF. |
+| `opening_date` | Não aplicável | Data de abertura | Confirmação forte para PJ. |
+| `mother_name` | Nome da mãe | Não aplicável | Evidência forte para PF. |
+| `father_name` | Nome do pai | Não aplicável | Evidência complementar para PF. |
+| `trade_name` | Não aplicável | Nome fantasia | Evidência complementar para PJ. |
+| `email` | E-mail | E-mail | Evidência auxiliar. |
+| `phone` | Telefone | Telefone | Evidência auxiliar. |
+| `address` | Endereço | Endereço | Evidência auxiliar. |
+
+<Note>
+  Envie ao menos um campo útil além do documento para obter uma validação conclusiva. Dados como e-mail, telefone e endereço ajudam como evidências, mas não substituem campos principais de identidade.
+</Note>
+
+## Resultado principal
+
+O retorno consolidado fica em `result.registration`.
+
+```json
+{
+  "model": "pf",
+  "status": "approved",
+  "score": 92.5,
+  "identity_score": 88,
+  "evidence_bonus": 4.5,
+  "recommended_action": "approve",
+  "summary": "Identidade principal compatível; evidências auxiliares confirmadas parcialmente.",
+  "critical_errors": []
+}
+```
+
+| Campo | Como interpretar |
+| --- | --- |
+| `status` | Resultado consolidado da validação. |
+| `score` | Pontuação final de `0` a `100`. |
+| `identity_score` | Score calculado com campos principais verificáveis. |
+| `evidence_bonus` | Bônus por evidências auxiliares compatíveis. |
+| `recommended_action` | Ação sugerida para o fluxo do cliente. |
+| `summary` | Resumo objetivo dos principais achados. |
+| `critical_errors` | Divergências críticas que impedem aprovação automática. |
+
+## Status e decisão
+
+| Status | Interpretação |
+| --- | --- |
+| `approved` | Dados compatíveis com a base. |
+| `manual_review` | Dados parcialmente compatíveis ou insuficientes para aprovação automática. |
+| `rejected` | Foram encontradas divergências críticas. |
+
+| Ação recomendada | Como tratar |
+| --- | --- |
+| `approve` | Permitir avanço automático, conforme sua política. |
+| `manual_review` | Encaminhar para revisão operacional. |
+| `reject` | Reprovar ou bloquear o fluxo, conforme sua regra. |
+| `insufficient_data` | Solicitar mais dados antes de decidir. |
+
+<Warning>
+  A decisão final deve considerar sua política interna de risco. Não use apenas `score` isoladamente quando houver `critical_errors`.
+</Warning>
+
+## Resultado por campo
+
+O campo `field_results` mostra a comparação individual de cada dado enviado.
+
+```json
+{
+  "field_results": {
+    "document": {
+      "status": "confirmed",
+      "impact": "positive",
+      "score": 100,
+      "message": "Documento confirmado na base."
+    },
+    "name": {
+      "status": "partial",
+      "impact": "positive",
+      "score": 84.7,
+      "similarity": 84.7,
+      "message": "Nome parcialmente compatível com a base."
+    }
+  }
+}
+```
+
+| Status do campo | Significado |
+| --- | --- |
+| `confirmed` | Campo confirmado na base. |
+| `partial` | Campo parcialmente compatível. |
+| `mismatch` | Campo divergente. |
+| `not_available` | Campo indisponível na base. |
+| `not_provided` | Campo não enviado na requisição. |
+| `not_applicable` | Campo não aplicável ao modelo analisado. |
+
+| Impacto | Significado |
+| --- | --- |
+| `positive` | Evidência favorável. |
+| `negative` | Evidência desfavorável. |
+| `critical` | Divergência crítica. |
+| `neutral` | Sem impacto relevante na decisão. |
+
+## Dados de comparação
+
+`compared_data` retorna apenas os dados usados para comparação e pode variar conforme o modelo e os campos informados.
+
+```json
+{
+  "compared_data": {
+    "document": "00000000000",
+    "name": "PESSOA EXEMPLO DOS SANTOS",
+    "birth_or_opening_date": "1990-01-01",
+    "mother_name": "MARIA EXEMPLO DOS SANTOS"
+  }
+}
+```
+
+<Warning>
+  Campos de `compared_data` e `field_results` podem não aparecer em todas as validações. A disponibilidade depende do modelo, dos dados informados e das informações existentes na base.
+</Warning>
+
+## Exemplos de uso
+
+### Pessoa física
+
+```json
+{
+  "model": "pf",
+  "document": "00000000000",
+  "name": "PESSOA EXEMPLO DOS SANTOS",
+  "birthdate": "1990-01-01",
+  "mother_name": "MARIA EXEMPLO DOS SANTOS",
+  "email": "contato@example.com",
+  "phone": "11999990000",
+  "address": {
+    "zipcode": "01001000",
+    "street": "Rua Exemplo",
+    "number": "100",
+    "city": "São Paulo",
+    "state": "SP"
+  }
+}
+```
+
+### Pessoa jurídica
+
+```json
+{
+  "model": "pj",
+  "document": "00000000000000",
+  "name": "EMPRESA EXEMPLO LTDA",
+  "trade_name": "EMPRESA EXEMPLO",
+  "opening_date": "2020-01-01",
+  "email": "contato@example.com",
+  "phone": "1130000000",
+  "address": {
+    "zipcode": "01001000",
+    "street": "Rua Exemplo",
+    "number": "100",
+    "city": "São Paulo",
+    "state": "SP"
+  }
+}
+```
+
+## Cobrança e sandbox
+
+Chamadas reais debitam o valor da validação conforme o preço vigente da conta.
+
+Para testar a integração sem consumo de saldo, envie:
+
+```http
+x-ambient: sandbox
+```
+
+<Card title="Ambiente de teste" icon="flask" horizontal href="/quickstart/sandbox">
+  Veja como usar o sandbox para validar payloads e respostas antes de chamadas reais.
+</Card>
+
+## Erros comuns
+
+| Situação | Como tratar |
+| --- | --- |
+| Documento inválido | Corrija CPF ou CNPJ antes de tentar novamente. |
+| Modelo inválido | Use apenas `pf` ou `pj`. |
+| Dados insuficientes | Envie ao menos um campo útil além do documento. |
+| Restrição de privacidade | Não force retry; trate como dado indisponível. |
+| Menor de idade ou PEP | Aplique sua política interna para bloqueio ou revisão. |
+| Falha de provedor | Implemente retry com intervalo progressivo para falhas temporárias. |
+
+## Boas práticas
+
+- Priorize campos fortes: nome, data principal e filiação para PF; razão social e abertura para PJ.
+- Use e-mail, telefone e endereço como evidências auxiliares.
+- Encaminhe `manual_review` para revisão humana quando o fluxo tiver impacto sensível.
+- Registre `score`, `recommended_action` e `critical_errors` para auditoria interna.
+- Não armazene documentos ou dados sensíveis em logs sem necessidade.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Validação cadastral" icon="shield-check" href="/api-reference/validation/registration">
+    Consulte a documentação completa do endpoint.
+  </Card>
+
+  <Card title="Comparação facial" icon="face-viewfinder" href="/api-reference/validation/facial-compare">
+    Combine evidências cadastrais com comparação facial quando o fluxo exigir maior rigor.
+  </Card>
+</Columns>

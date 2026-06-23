@@ -1,0 +1,174 @@
+---
+title: "Busca por e-mail"
+description: "Busque pessoas físicas vinculadas a um endereço de e-mail."
+sidebarTitle: "Busca por e-mail"
+api: "POST /v1/search/person/email"
+playground: "interactive"
+---
+
+Executa uma busca paginada de pessoa física a partir de um endereço de e-mail.
+
+Use esta rota quando você possui um e-mail e precisa localizar possíveis pessoas físicas relacionadas a ele.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Consulta realizada com sucesso.",
+  "result": {
+    "items": [
+      {
+        "taxid": "00000000000",
+        "name": "PESSOA EXEMPLO DOS SANTOS",
+        "birthdate": "1988-04-22",
+        "age": 38,
+        "mother_name": "ANA DOS SANTOS",
+        "father_name": "CARLOS DOS SANTOS",
+        "location": "São Paulo/SP",
+        "city": "São Paulo",
+        "state": "SP",
+        "synthetic": true
+      }
+    ],
+    "has_more": false,
+    "page": 1,
+    "price": 0.09,
+    "charged": 0.09,
+    "debit_only_if_found": false,
+    "time": 0.42,
+    "test": false
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Um ou mais parâmetros informados são inválidos."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="email" type="string" required placeholder="contato@example.com">
+  E-mail usado na busca. O valor é normalizado para letras minúsculas antes da consulta.
+</ParamField>
+
+<ParamField body="page" default="1" type="integer">
+  Página dos resultados. Use a próxima página enquanto `has_more` for `true`.
+</ParamField>
+
+<ParamField header="x-ambient" type="string" placeholder="sandbox">
+  Use `sandbox` para executar uma chamada de teste sem consumo de saldo.
+</ParamField>
+
+<Note>
+  Para detalhes sobre chamadas de teste, consulte [Ambiente de teste](/quickstart/sandbox).
+</Note>
+
+## Regras do e-mail
+
+O campo `email` deve conter um endereço de e-mail válido.
+
+Espaços no início e no fim são removidos automaticamente, e o valor é convertido para letras minúsculas antes da busca.
+
+## Exemplo de corpo
+
+```json
+{
+  "email": "contato@example.com",
+  "page": 1
+}
+```
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta da API.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da resposta.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Objeto principal com os registros encontrados, dados de paginação, cobrança e tempo de execução.
+</ResponseField>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `items` | `array<object>` | Registros encontrados para o e-mail informado. |
+| `has_more` | `boolean` | Indica se existe próxima página disponível. |
+| `page` | `integer` | Página retornada. |
+| `price` | `number` | Preço da busca para a conta autenticada. |
+| `charged` | `number` | Valor debitado nesta chamada. Em sandbox, retorna `0`. |
+| `debit_only_if_found` | `boolean` | Indica se a cobrança ocorre apenas quando houver resultado útil. |
+| `time` | `number` | Tempo de execução em segundos. |
+| `test` | `boolean` | Indica se a chamada foi executada em ambiente de teste. |
+
+## Estrutura de `result.items[]`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `taxid` | `string` | CPF encontrado. |
+| `name` | `string` | Nome da pessoa. |
+| `birthdate` | `string` | Data de nascimento no formato `yyyy-mm-dd`, quando disponível. |
+| `age` | `integer` | Idade calculada, quando disponível. |
+| `mother_name` | `string` | Nome da mãe, quando disponível. |
+| `father_name` | `string` | Nome do pai, quando disponível. |
+| `location` | `string` | Localização resumida, quando disponível. |
+| `city` | `string` | Cidade, quando disponível. |
+| `state` | `string` | UF, quando disponível. |
+| `synthetic` | `boolean` | Indica retorno sintético em chamadas sandbox, quando aplicável. |
+
+<Warning>
+  Campos de `items[]` podem não ser retornados em todas as consultas. A disponibilidade depende do e-mail informado e dos dados existentes para os registros encontrados.
+</Warning>
+
+## Paginação
+
+Quando `has_more` retornar `true`, envie a mesma requisição incrementando `page`.
+
+```json
+{
+  "email": "contato@example.com",
+  "page": 2
+}
+```
+
+## Respostas esperadas
+
+As respostas possíveis estão exemplificadas no painel lateral da página.
+
+| Status | Quando ocorre |
+| --- | --- |
+| `200` | Busca executada com sucesso. |
+| `400` | Requisição inválida, e-mail ausente ou e-mail em formato incompatível. |
+| `401` | A chave da API está ausente, inválida ou não pôde ser autenticada. |
+| `403` | A credencial não possui escopo de consulta, o plano não permite acesso ou há bloqueio financeiro. |
+
+## Fluxo recomendado
+
+1. Informe um endereço de e-mail válido.
+2. Leia `items` e verifique `has_more`.
+3. Se `has_more` for `true`, consulte a próxima página.
+4. Use `x-ambient: sandbox` para validar integração sem consumir saldo.

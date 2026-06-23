@@ -1,0 +1,122 @@
+---
+title: "Listar histórico"
+description: "Liste consultas anteriores da conta com filtros e paginação."
+sidebarTitle: "Listar histórico"
+api: "GET /v1/search/history"
+playground: "interactive"
+---
+
+Lista registros de histórico de consultas da conta autenticada.
+
+Use este endpoint para auditoria, telas de histórico e recuperação de consultas anteriores sem executar uma nova consulta.
+
+<Warning>
+  Este endpoint exige credencial com escopo `history`. Para executar novas consultas, use o escopo `search`.
+</Warning>
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Histórico retornado com sucesso.",
+  "result": {
+    "items": [
+      {
+        "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+        "target": "pf",
+        "status": "completed",
+        "identifier": "00000000000",
+        "datasets_count": 1,
+        "datasets_completed": 1,
+        "datasets_failed": 0,
+        "datasets_processing": 0,
+        "result_count": 1,
+        "charged": 0.05,
+        "refunded": 0,
+        "elapsed": 0.42,
+        "created_at": "2026-06-22T12:00:00Z",
+        "last_updated_at": "2026-06-22T12:00:01Z"
+      }
+    ],
+    "pagination": {
+      "offset": 0,
+      "limit": 10,
+      "total": 1,
+      "has_more": false
+    },
+    "status_values": ["all", "queued", "processing", "completed", "completed_with_errors", "failed"],
+    "target_values": ["all", "pf", "pj", "process", "vehicle"]
+  }
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "Histórico de consultas indisponível para esta conta."
+}
+```
+
+</ResponseExample>
+
+## Query parameters
+
+<ParamField query="target" default="all" type="string">
+  Filtra o tipo da consulta. Aceita `all`, `pf`, `pj`, `process` ou `vehicle`.
+</ParamField>
+
+<ParamField query="status" default="all" type="string">
+  Filtra o status da consulta. Aceita `all`, `queued`, `processing`, `completed`, `completed_with_errors` ou `failed`.
+</ParamField>
+
+<ParamField query="document" type="string">
+  Filtra por CPF, CNPJ, placa ou ID do histórico.
+</ParamField>
+
+<ParamField query="date_from" type="string">
+  Data inicial da busca no formato `YYYY-MM-DD`.
+</ParamField>
+
+<ParamField query="date_to" type="string">
+  Data final da busca no formato `YYYY-MM-DD`.
+</ParamField>
+
+<ParamField query="offset" default="0" type="integer">
+  Posição inicial da paginação.
+</ParamField>
+
+<ParamField query="limit" default="10" type="integer">
+  Quantidade máxima de itens retornados. O limite máximo é `100`.
+</ParamField>
+
+## Campos de item
+
+| Campo | Descrição |
+| --- | --- |
+| `id` | ID do histórico. |
+| `target` | Tipo da consulta: `pf`, `pj`, `process` ou `vehicle`. |
+| `status` | Status geral da consulta. |
+| `identifier` | CPF, CNPJ, placa ou ID usado como identificador. |
+| `datasets_count` | Total de datasets solicitados. |
+| `datasets_completed` | Quantidade de datasets concluídos. |
+| `datasets_failed` | Quantidade de datasets com falha. |
+| `datasets_processing` | Quantidade de datasets ainda em processamento. |
+| `result_count` | Quantidade aproximada de blocos de resultado. |
+| `charged` | Valor cobrado. |
+| `refunded` | Valor estornado. |
+| `elapsed` | Tempo total em segundos. |
+| `created_at` | Data de criação do histórico. |
+| `last_updated_at` | Última atualização do histórico. |
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Detalhar histórico" icon="file-magnifying-glass" href="/api-reference/search/history-detail">
+    Consulte resultado completo, custos, erros e metadados.
+  </Card>
+
+  <Card title="Histórico de consultas" icon="clock-rotate-left" href="/search/history">
+    Entenda o uso do histórico e a diferença para polling assíncrono.
+  </Card>
+</Columns>

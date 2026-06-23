@@ -1,0 +1,123 @@
+---
+title: "Detalhar histórico"
+description: "Consulte o resultado completo de uma consulta armazenada no histórico."
+sidebarTitle: "Detalhar histórico"
+api: "GET /v1/search/history/{history_id}"
+playground: "interactive"
+---
+
+Retorna o detalhe de uma consulta armazenada no histórico da conta autenticada.
+
+Use este endpoint para recuperar resultado, custos, estornos, tempos, erros, status por dataset e metadados de datasets depois da janela curta de polling assíncrono.
+
+<Warning>
+  Este endpoint exige credencial com escopo `history`. Ele não executa novamente os datasets e não atualiza os dados da consulta.
+</Warning>
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Histórico da consulta retornado com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "completed",
+    "status_values": ["queued", "processing", "completed", "completed_with_errors", "failed"],
+    "target": "person",
+    "query": {
+      "taxid": "00000000000",
+      "datasets": ["person_basic_data"],
+      "additional": {}
+    },
+    "cost": {
+      "total": 0.05,
+      "refunded": 0,
+      "datasets": {
+        "person_basic_data": {
+          "charged": 0.05,
+          "refunded": 0
+        }
+      }
+    },
+    "timing": {
+      "total": 0.42,
+      "datasets": {
+        "person_basic_data": 0.42
+      }
+    },
+    "errors": {},
+    "cache": {},
+    "datasets_status": {
+      "person_basic_data": "completed"
+    },
+    "datasets_meta": {
+      "person_basic_data": {
+        "id": "person_basic_data",
+        "name": "Dados básicos",
+        "target": "pf"
+      }
+    },
+    "result": {
+      "person_basic_data": {
+        "tax_id": "00000000000",
+        "name": "PESSOA EXEMPLO"
+      }
+    },
+    "created_at": "2026-06-22T12:00:00Z",
+    "last_updated_at": "2026-06-22T12:00:01Z"
+  }
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "O histórico da consulta não foi encontrado."
+}
+```
+
+</ResponseExample>
+
+## Parâmetros
+
+<ParamField path="history_id" type="string" required placeholder="9fcb573b-7f62-4774-978b-07e89dfef5f2">
+  ID do histórico da consulta.
+</ParamField>
+
+## Estrutura de `result`
+
+| Campo | Descrição |
+| --- | --- |
+| `id` | Identificador do histórico. |
+| `status` | Status geral da consulta. |
+| `status_values` | Status possíveis para acompanhamento. |
+| `target` | Tipo público da consulta: `person`, `company`, `process` ou `vehicle`. |
+| `query` | Documento, datasets e campos adicionais usados na consulta. |
+| `cost` | Valores cobrados e estornados. |
+| `timing` | Tempo total e tempo individual por dataset. |
+| `errors` | Erros por dataset ou falhas globais. |
+| `cache` | Informações de cache, quando aplicável. |
+| `datasets_status` | Status individual de cada dataset solicitado. |
+| `datasets_meta` | Nome, descrição e estrutura dos datasets usados. |
+| `result` | Resultado agrupado por dataset. |
+| `created_at` | Data de criação do histórico. |
+| `last_updated_at` | Última atualização do histórico. |
+
+## Diferença para resultado assíncrono
+
+`GET /v1/search/{target}/{history_id}` é indicado para polling logo após iniciar uma consulta assíncrona e pode respeitar janela curta de leitura.
+
+`GET /v1/search/history/{history_id}` consulta o histórico armazenado da conta, conforme plano, permissão e política de retenção.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Listar histórico" icon="list" href="/api-reference/search/history-list">
+    Liste consultas anteriores com filtros e paginação.
+  </Card>
+
+  <Card title="Resultado assíncrono" icon="clock" href="/api-reference/search/async-result">
+    Faça polling de uma consulta recém-iniciada.
+  </Card>
+</Columns>

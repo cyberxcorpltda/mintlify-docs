@@ -1,0 +1,174 @@
+---
+title: "Consultas"
+description: "Códigos de erro retornados pelos endpoints de consultas da Lazy Data."
+keywords: ["erro consulta", "consulta cpf", "consulta cnpj", "consulta processo", "consulta veículo", "códigos de erro lazy data"]
+sidebarTitle: "Consultas"
+---
+
+Esta página lista os principais códigos de erro retornados pelos recursos de **consulta** da API Lazy Data.
+
+Esses erros podem ocorrer em consultas de pessoa física, pessoa jurídica, processos, veículos, listagem de datasets, resultado assíncrono e execução de datasets específicos.
+
+## Estrutura do erro
+
+Os erros seguem o mesmo contrato base das respostas da API:
+
+```json
+{
+  "code": 42025,
+  "message": "Não foi possível consultar o provedor da consulta.",
+  "result": null
+}
+```
+
+<ResponseField name="code" type="integer" required>
+  Código interno da Lazy Data. Use este campo para tratamento programático.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva do erro. Pode ser exibida ao usuário ou registrada em logs.
+</ResponseField>
+
+<ResponseField name="result" type="object | null">
+  Resultado da operação. Em erros, normalmente retorna `null`.
+</ResponseField>
+
+<Note>
+  O status HTTP indica a categoria geral da falha. O campo `code` identifica o motivo específico dentro da Lazy Data.
+</Note>
+
+## Exemplos de resposta
+
+<ResponseExample>
+
+```json 400
+{
+  "code": 42038,
+  "message": "CPF inválido.",
+  "result": null
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida.",
+  "result": null
+}
+```
+
+```json 403
+{
+  "code": 42002,
+  "message": "A funcionalidade de consulta não está habilitada para a conta atual.",
+  "result": null
+}
+```
+
+```json 404
+{
+  "code": 42023,
+  "message": "O histórico da consulta não foi encontrado.",
+  "result": null
+}
+```
+
+```json 502
+{
+  "code": 42025,
+  "message": "Não foi possível consultar o provedor da consulta.",
+  "result": null
+}
+```
+
+</ResponseExample>
+
+## Acesso, plano e cobrança
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `42001` | Não foi possível identificar um plano válido para a conta. | A conta não possui um plano válido ou o plano não foi localizado. |
+| `42002` | A funcionalidade de consulta não está habilitada para a conta atual. | O plano atual não permite usar consultas pela API. |
+| `42011` | Não foi possível reservar o valor da consulta. Verifique saldo disponível ou limite mensal. | Saldo insuficiente, limite mensal atingido ou falha ao reservar o valor da consulta. |
+
+## Datasets e tarifas
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `42007` | Um ou mais datasets informados não existem para consulta PJ. | Foi informado um dataset inexistente para o tipo de consulta solicitado. |
+| `42008` | Um ou mais datasets informados estão inativos. | O dataset existe, mas está desabilitado. |
+| `42009` | Campos adicionais informados para datasets não selecionados. | Foram enviados campos adicionais para datasets que não fazem parte da consulta. |
+| `42010` | Um ou mais campos adicionais informados não são aceitos pelo dataset. | Algum campo adicional não é permitido pelo dataset selecionado. |
+| `42015` | Não foi possível executar o dataset solicitado. | O dataset falhou durante a execução. |
+| `42028` | A tarifa da consulta não foi encontrada. | A tarifa vinculada à busca solicitada não foi localizada. |
+| `42029` | A tarifa da consulta está inativa. | A tarifa existe, mas está desabilitada. |
+
+## Documentos e parâmetros inválidos
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `42013` | CNPJ inválido. | O CNPJ informado não passou na validação. |
+| `42014` | CNPJ não encontrado. | O CNPJ é válido, mas não foi localizado na base consultada. |
+| `42030` | Telefone inválido. | O telefone informado não possui formato válido. |
+| `42031` | E-mail inválido. | O e-mail informado não possui formato válido. |
+| `42038` | CPF inválido. | O CPF informado não passou na validação. |
+| `42039` | CPF não encontrado. | O CPF é válido, mas não foi localizado na base consultada. |
+| `42044` | Placa inválida. | A placa informada não possui formato válido. |
+
+## Provedores externos
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `42024` | Erro retornado pelo provedor da consulta. | O provedor externo retornou um erro conhecido. |
+| `42025` | Não foi possível consultar o provedor da consulta. | Falha de comunicação, indisponibilidade ou timeout do provedor. |
+| `42026` | Resposta inválida retornada pelo provedor da consulta. | O provedor retornou uma resposta fora do formato esperado. |
+| `42043` | Erro ao tentar resolver o captcha. | O captcha necessário para a consulta não pôde ser resolvido. |
+
+<Warning>
+  Em consultas com múltiplos datasets, uma falha de provedor pode afetar apenas o dataset correspondente. Os demais datasets podem continuar sendo processados.
+</Warning>
+
+## Certidões e captcha
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `42016` | CPF ou CNPJ não informado. | Documento obrigatório não foi enviado para a consulta do dataset. |
+| `42017` | Falha ao obter o token de validação. | Não foi possível obter o token necessário na página do provedor. |
+| `42018` | Falha ao identificar o contexto AJAX da página. | A estrutura da página do provedor não pôde ser interpretada. |
+| `42019` | Não foi possível obter os dados do captcha. | O captcha não foi localizado ou não retornou dados suficientes. |
+| `42020` | Não foi possível resolver o captcha da certidão. | O solver não conseguiu resolver o captcha exigido. |
+| `42021` | Não foi possível localizar o identificador da certidão. | A certidão foi consultada, mas o identificador do documento não foi encontrado. |
+| `42022` | Não foi possível baixar uma certidão PDF válida. | O PDF da certidão não foi gerado, expirou ou retornou inválido. |
+
+## Consulta assíncrona e histórico técnico
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `42012` | Não foi possível registrar o histórico da consulta. | A consulta foi processada, mas o registro técnico do resultado não pôde ser salvo. |
+| `42023` | O histórico da consulta não foi encontrado. | O ID informado para consultar o resultado assíncrono não existe ou não pertence à conta autenticada. |
+| `42045` | O histórico de consultas não está habilitado para a conta atual. | O plano não permite acessar detalhes de histórico quando o recurso for exigido. |
+
+## Restrições de privacidade
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `42040` | Os dados desta consulta não estão disponíveis por restrição de privacidade prevista na LGPD. | O CPF possui restrição de privacidade. |
+| `42041` | A consulta de dados de menores de idade não é permitida. | O CPF pertence a uma pessoa menor de idade. |
+| `42042` | A consulta de dados de pessoas politicamente expostas não é permitida. | O CPF pertence a uma pessoa marcada como PEP. |
+
+## Tratamento recomendado
+
+<Steps>
+  <Step title="Valide os dados antes de consultar">
+    Verifique CPF, CNPJ, telefone, e-mail ou placa antes de enviar a requisição.
+  </Step>
+  <Step title="Trate erros de saldo e plano">
+    Para códigos como `42002` e `42011`, direcione o usuário para revisar plano, saldo, limite mensal ou situação financeira da conta.
+  </Step>
+  <Step title="Implemente retry apenas para falhas temporárias">
+    Códigos como `42025`, `42026` e `42043` podem ser temporários. Use retry com intervalo progressivo.
+  </Step>
+  <Step title="Não repita erros definitivos sem correção">
+    Erros como CPF inválido, CNPJ inválido, placa inválida, tarifa inativa ou dataset inativo devem ser corrigidos antes de uma nova tentativa.
+  </Step>
+</Steps>

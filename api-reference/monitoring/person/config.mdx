@@ -1,0 +1,64 @@
+---
+title: "Configuração"
+keywords: ["configuração monitoramento pf", "fontes monitoramento", "cpf", "lazy data"]
+description: "Consulte fontes, preços e frequências disponíveis para monitoramento de pessoa física."
+sidebarTitle: "Configuração"
+api: "GET /v1/monitoring/person/config"
+playground: "interactive"
+---
+
+Retorna as fontes disponíveis para monitorar uma pessoa física, com preço por checagem e frequências aceitas.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Configuração de monitoramento retornada com sucesso.",
+  "result": {
+    "monitoring": {
+      "id": "person_datasets",
+      "name": "Monitoramento de pessoa física",
+      "type": "pf",
+      "pricing_mode": "datasets",
+      "price_per_check": 0,
+      "frequencies": [
+        {
+          "id": "daily",
+          "name": "Diário",
+          "checks_per_month": 30,
+          "interval_seconds": 86400,
+          "estimated_monthly_cost": 0
+        }
+      ]
+    },
+    "sources": [
+      {
+        "id": "person_processes",
+        "source_type": "virtual_process_group",
+        "name": "Processos",
+        "price_per_check": 0.35,
+        "active": true,
+        "datasets_count": 4
+      }
+    ]
+  }
+}
+```
+
+</ResponseExample>
+
+## Estrutura de `result.sources[]`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | ID da fonte. Use em `sources[].source_id` ao criar o monitoramento. |
+| `source_type` | `string` | Tipo da fonte, como `dataset` ou `virtual_process_group`. |
+| `name` | `string` | Nome amigável da fonte. |
+| `price_per_check` | `number` | Preço por checagem desta fonte. |
+| `active` | `boolean` | Indica se a fonte está disponível. |
+| `datasets_count` | `integer` | Total de datasets consolidados, quando aplicável. |
+
+## Frequências
+
+Use `result.monitoring.frequencies[].id` em cada item de `sources` na rota [Criar monitoramento](/api-reference/monitoring/person/create).

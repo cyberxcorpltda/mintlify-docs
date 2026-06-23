@@ -1,0 +1,203 @@
+---
+title: "Visão geral"
+keywords: ["consultas lazy data", "consulta cpf", "consulta cnpj", "consulta processual", "consulta veicular", "datasets"]
+description: "Entenda como funcionam as consultas da Lazy Data, quais tipos estão disponíveis e como interpretar os resultados."
+sidebarTitle: "Visão geral"
+---
+
+As **consultas** permitem buscar informações estruturadas em bases de dados selecionadas, retornando dados consolidados por tipo de entidade.
+
+Na Lazy Data, uma consulta é formada por:
+
+- um **documento ou identificador de entrada**;
+- uma lista de **datasets selecionados**;
+- regras de **plano, saldo e permissões**;
+- um retorno padronizado com os dados encontrados.
+
+<Card title="Datasets e preços" icon="database" horizontal href="/api-reference/search/datasets">
+  Consulte datasets disponíveis, preço aplicado, campos adicionais e estrutura de retorno.
+</Card>
+
+## Tipos de consulta
+
+<Columns cols={2}>
+  <Card title="Pessoa física" icon="user" href="/search/person">
+    Consulte informações vinculadas a CPF, como dados cadastrais, risco, protestos, scores, presença em cobrança e outros datasets disponíveis.
+  </Card>
+
+  <Card title="Pessoa jurídica" icon="building" href="/search/company">
+    Consulte informações vinculadas a CNPJ, incluindo dados cadastrais, atividade econômica, quadro societário, protestos, scores, dívida ativa e outros datasets.
+  </Card>
+
+  <Card title="Processos" icon="scale-balanced" href="/search/process">
+    Consulte processos judiciais vinculados a CPF ou CNPJ em bases processuais disponíveis.
+  </Card>
+
+  <Card title="Veículos" icon="car" href="/search/vehicle">
+    Consulte dados veiculares a partir da placa, incluindo características do veículo, situação, restrições e indicadores disponíveis.
+  </Card>
+</Columns>
+
+## Como uma consulta funciona
+
+<Steps>
+  <Step title="Escolha o tipo de consulta">
+    Defina se a busca será por CPF, CNPJ, documento processual ou placa.
+  </Step>
+  <Step title="Liste datasets disponíveis">
+    Use a listagem de datasets para identificar módulos ativos, preços, campos adicionais e estrutura de retorno.
+  </Step>
+  <Step title="Envie o identificador e os datasets">
+    Execute a consulta informando o documento ou identificador e os IDs dos datasets desejados.
+  </Step>
+  <Step title="Interprete resultados e custos">
+    Leia `result`, `datasets_status`, valores consumidos, estornos e mensagens retornadas.
+  </Step>
+</Steps>
+
+## Datasets
+
+Cada consulta é composta por um ou mais **datasets**.
+
+Um dataset representa uma base ou módulo de informação específico, como dados básicos, protestos, score de crédito, mandados de prisão, processos judiciais ou dados veiculares.
+
+Ao selecionar datasets, o sistema calcula a estimativa da consulta com base nos valores configurados para sua conta.
+
+<Warning>
+  Use apenas datasets com `active: true` e habilitados para a conta autenticada. Datasets inativos, indisponíveis ou sem permissão podem retornar erro.
+</Warning>
+
+## Campos adicionais
+
+Alguns datasets podem exigir parâmetros complementares.
+
+Esses campos aparecem em `additional_fields` na listagem de datasets.
+
+Exemplo:
+
+```json
+{
+  "datasets": ["example_dataset"],
+  "additional": {
+    "example_dataset": {
+      "state": "SP"
+    }
+  }
+}
+```
+
+Quando um dataset exigir dados adicionais, envie os valores em `additional`, usando o ID do dataset como chave.
+
+## Consulta de teste
+
+Quando disponível, a **consulta de teste** permite validar a integração sem consumir saldo.
+
+Ela é útil para:
+
+- testar autenticação;
+- validar payloads;
+- entender a estrutura de retorno;
+- simular respostas no ambiente de desenvolvimento.
+
+Para testar no sandbox, envie:
+
+```http
+x-ambient: sandbox
+```
+
+<Info>
+  Consultas de teste podem retornar dados simulados ou controlados, conforme a funcionalidade utilizada.
+</Info>
+
+<Card title="Ambiente de teste" icon="flask" horizontal href="/quickstart/sandbox">
+  Veja como usar sandbox para validar integrações sem consumir saldo.
+</Card>
+
+## Cobrança
+
+A cobrança depende dos datasets selecionados e das regras comerciais da conta.
+
+Em geral:
+
+- datasets concluídos podem gerar cobrança;
+- datasets com falha podem ser estornados conforme regra aplicável;
+- contas pré-pagas precisam ter saldo disponível;
+- contas pós-pagas respeitam limite mensal e situação da fatura;
+- subcontas podem respeitar limites mensais configurados pela conta principal.
+
+<Note>
+  Consultas com múltiplos datasets podem retornar resultados parciais caso algum dataset falhe. Nesses casos, confira o status individual de cada dataset.
+</Note>
+
+## Retorno
+
+As respostas seguem um formato padronizado:
+
+```json
+{
+  "code": 200,
+  "message": "Consulta realizada com sucesso.",
+  "result": {}
+}
+```
+
+O campo `result` contém os dados retornados pelos datasets selecionados.
+
+Em consultas com múltiplos datasets, o retorno também pode trazer informações como:
+
+| Campo | Descrição |
+| --- | --- |
+| `query` | Documento, identificador, datasets e campos adicionais usados na consulta. |
+| `cost` | Valores debitados e estornados por dataset. |
+| `datasets_status` | Status individual de cada dataset consultado. |
+| `result` | Dados retornados pelos datasets executados. |
+
+## Consultas assíncronas
+
+Algumas consultas podem ser processadas em segundo plano.
+
+Nesses casos, a resposta inicial retorna um identificador para acompanhar o andamento e consultar o resultado final depois.
+
+<Card title="Resultado assíncrono" icon="clock" horizontal href="/api-reference/search/async-result">
+  Consulte o andamento e o resultado final de consultas iniciadas em segundo plano.
+</Card>
+
+## Histórico
+
+Consultas realizadas podem ficar disponíveis no histórico da conta, conforme o plano contratado e as permissões do usuário.
+
+O histórico permite revisar consultas anteriores sem executar uma nova chamada.
+
+<Card title="Histórico de consultas" icon="history" horizontal href="/search/history">
+  Entenda como acompanhar consultas assíncronas, revisar resultados anteriores e interpretar custos, erros e status por dataset.
+</Card>
+
+## Boas práticas
+
+- Liste datasets antes de executar a consulta.
+- Use apenas datasets necessários para o objetivo da operação.
+- Valide CPF, CNPJ, placa ou identificador antes de consultar.
+- Use sandbox para testar payloads e respostas.
+- Trate resultados parciais quando a consulta tiver múltiplos datasets.
+- Não armazene documentos ou retornos sensíveis em logs sem necessidade.
+- Trate erros de saldo, plano, permissão e provedor separadamente.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Consultar pessoa física" icon="user" href="/search/person">
+    Veja como estruturar uma consulta por CPF.
+  </Card>
+
+  <Card title="Consultar pessoa jurídica" icon="building" href="/search/company">
+    Veja como estruturar uma consulta por CNPJ.
+  </Card>
+
+  <Card title="Consultar processos" icon="scale-balanced" href="/search/process">
+    Entenda como consultar processos vinculados a CPF ou CNPJ.
+  </Card>
+
+  <Card title="Histórico de consultas" icon="history" href="/search/history">
+    Veja como revisar consultas anteriores e acompanhar resultados assíncronos.
+  </Card>
+</Columns>

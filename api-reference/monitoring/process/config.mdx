@@ -1,0 +1,52 @@
+---
+title: "Configuração"
+keywords: ["configuração monitoramento processo", "frequência", "preço", "lazy data"]
+description: "Consulte preço por checagem e frequências disponíveis para monitoramento processual."
+sidebarTitle: "Configuração"
+api: "GET /v1/monitoring/process/config"
+playground: "interactive"
+---
+
+Retorna a configuração disponível para monitoramento de processos, incluindo preço por checagem e frequências aceitas.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Configuração de monitoramento retornada com sucesso.",
+  "result": {
+    "id": "process_datajud",
+    "name": "Processos judiciais",
+    "type": "process",
+    "pricing_mode": "fixed",
+    "price_per_check": 0.03,
+    "frequencies": [
+      {
+        "id": "daily",
+        "name": "Diário",
+        "checks_per_month": 30,
+        "interval_seconds": 86400,
+        "estimated_monthly_cost": 0.9
+      }
+    ]
+  }
+}
+```
+
+</ResponseExample>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | ID do produto de monitoramento. |
+| `name` | `string` | Nome amigável. |
+| `type` | `string` | Para esta rota, retorna `process`. |
+| `pricing_mode` | `string` | Modelo de cobrança. |
+| `price_per_check` | `number` | Preço de cada checagem. |
+| `frequencies` | `array<object>` | Frequências disponíveis. |
+
+## Frequências
+
+Use o campo `frequencies[].id` no corpo da rota [Criar monitoramento](/api-reference/monitoring/process/create).

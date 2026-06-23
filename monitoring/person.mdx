@@ -1,0 +1,543 @@
+---
+title: "Pessoa física"
+description: "Acompanhe mudanças em fontes vinculadas a um CPF."
+sidebarTitle: "Pessoa física"
+keywords: ["monitoramento pessoa física", "monitoramento cpf", "protestos", "scores", "processos cpf", "lazy data"]
+---
+
+O **monitoramento de pessoa física** acompanha mudanças em fontes vinculadas a um CPF.
+
+Diferente do monitoramento de processo, esse tipo não acompanha movimentações de cada processo encontrado. O objetivo é identificar mudanças relevantes nas fontes selecionadas, como novos processos vinculados ao CPF, alterações em bases cadastrais, indicadores financeiros ou outros módulos habilitados para a conta.
+
+<Card title="Criar monitoramento de CPF" icon="user" horizontal href="/api-reference/monitoring/person/create">
+  Veja os parâmetros necessários para criar um monitoramento de pessoa física pela API.
+</Card>
+
+## Quando usar
+
+Use o monitoramento de pessoa física quando sua operação precisa acompanhar mudanças recorrentes no perfil de uma pessoa.
+
+Casos comuns:
+
+- identificar novos processos vinculados ao CPF;
+- acompanhar mudanças em fontes cadastrais ou restritivas;
+- acompanhar alterações em indicadores de risco;
+- receber alertas quando houver novidade relevante;
+- reduzir consultas manuais recorrentes em bases selecionadas.
+
+<Warning>
+  O monitoramento de CPF não substitui o monitoramento processual por número CNJ. Para acompanhar movimentações de um processo específico, use o monitoramento de processo.
+</Warning>
+
+## Identificador principal
+
+A chave principal é o CPF.
+
+Exemplo:
+
+```text
+000.000.000-00
+```
+
+A API aceita CPF com ou sem pontuação, mas o documento precisa ser válido e permitido para monitoramento.
+
+## Fluxo recomendado
+
+<Steps>
+  <Step title="Consulte a configuração">
+    Liste fontes disponíveis, preços por checagem e frequências aceitas.
+  </Step>
+  <Step title="Valide o CPF">
+    Confirme que o CPF é válido, localizado e pode ser monitorado.
+  </Step>
+  <Step title="Selecione fontes e frequências">
+    Escolha quais fontes serão acompanhadas e defina uma frequência para cada uma.
+  </Step>
+  <Step title="Crie o monitoramento">
+    Informe nome, CPF, fontes selecionadas e e-mail de notificação.
+  </Step>
+  <Step title="Acompanhe eventos">
+    Use o detalhe para consultar checagens, fontes, eventos e últimas alterações salvas.
+  </Step>
+</Steps>
+
+<Steps>
+  <Step title="Consulte a configuração">
+    Liste fontes disponíveis, preços por checagem e frequências aceitas.
+  </Step>
+  <Step title="Valide o CPF">
+    Confirme que o CPF é válido, localizado e pode ser monitorado.
+  </Step>
+  <Step title="Selecione fontes e frequências">
+    Escolha quais fontes serão acompanhadas e defina uma frequência para cada uma.
+  </Step>
+  <Step title="Crie o monitoramento">
+    Informe nome, CPF, fontes selecionadas e e-mail de notificação.
+  </Step>
+  <Step title="Acompanhe eventos">
+    Use o detalhe para consultar checagens, fontes, eventos e últimas alterações salvas.
+  </Step>
+</Steps>
+
+## Configuração
+
+Antes de criar, consulte a configuração do monitoramento de pessoa física.
+
+Ela retorna:
+
+- produto de monitoramento;
+- frequências disponíveis;
+- fontes habilitadas para a conta;
+- preço por checagem de cada fonte;
+- tipo operacional da fonte.
+
+<Card title="Configuração" icon="sliders" horizontal href="/api-reference/monitoring/person/config">
+  Consulte fontes, preços e frequências disponíveis para monitoramento de CPF.
+</Card>
+
+## Fontes disponíveis
+
+As fontes retornadas na configuração podem variar conforme plano, permissões e datasets habilitados.
+
+Cada fonte possui um `id`, usado como `source_id` na criação.
+
+Exemplo de fonte:
+
+```json
+{
+  "id": "person_processes",
+  "source_type": "virtual_process_group",
+  "name": "Processos",
+  "price_per_check": 0.35,
+  "active": true,
+  "datasets_count": 4
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `id` | Identificador da fonte. Use em `sources[].source_id`. |
+| `source_type` | Tipo da fonte, como `dataset` ou `virtual_process_group`. |
+| `name` | Nome amigável da fonte. |
+| `price_per_check` | Preço por checagem daquela fonte. |
+| `active` | Indica se a fonte está disponível. |
+| `datasets_count` | Total de datasets consolidados, quando aplicável. |
+
+## Validação inicial
+
+Antes da criação, valide se o CPF pode ser monitorado.
+
+```json
+{
+  "name": "PESSOA EXEMPLO DOS SANTOS",
+  "tax_id": "00000000000"
+}
+```
+
+<Card title="Validar pessoa física" icon="circle-check" horizontal href="/api-reference/monitoring/person/validate">
+  Confirme se o CPF é aceito para monitoramento.
+</Card>
+
+O monitoramento não deve ser criado quando o CPF for inválido, não localizado, protegido por restrição legal ou impedido por política interna.
+
+## Criação do monitoramento
+
+Para criar o monitoramento, informe:
+
+| Campo | Descrição |
+| --- | --- |
+| `name` | Nome da pessoa ou nome interno do monitoramento. |
+| `tax_id` | CPF monitorado, com ou sem pontuação. |
+| `sources` | Fontes que serão monitoradas. |
+| `notification_email` | E-mail que receberá alertas. |
+
+Cada fonte recebe sua própria frequência.
+
+```json
+{
+  "name": "PESSOA EXEMPLO DOS SANTOS",
+  "tax_id": "00000000000",
+  "sources": [
+    {
+      "source_id": "person_processes",
+      "frequency_id": "daily"
+    }
+  ],
+  "notification_email": "alertas@example.com"
+}
+```
+
+Ao criar, a checagem inicial é enviada para execução em segundo plano.
+
+## Estrutura de `sources[]`
+
+| Campo | Descrição |
+| --- | --- |
+| `source_id` | ID da fonte retornada na configuração. |
+| `frequency_id` | ID da frequência escolhida em `result.monitoring.frequencies[]`. |
+
+<Note>
+  Uma mesma fonte não deve ser enviada mais de uma vez. Se precisar mudar frequência ou fontes, cancele o monitoramento atual e crie uma nova configuração conforme sua regra operacional.
+</Note>
+
+## Frequência por fonte
+
+No monitoramento de pessoa física, cada fonte pode ter sua própria frequência.
+
+Exemplo:
+
+| Fonte | Frequência |
+| --- | --- |
+| Processos | Diário |
+| Protestos | Semanal |
+| Score de crédito | Mensal |
+
+Isso permite acompanhar fontes críticas com maior frequência e fontes menos sensíveis com intervalos maiores.
+
+## Processos vinculados ao CPF
+
+Quando a fonte de processos estiver selecionada, a Lazy Data consulta bases processuais disponíveis para localizar processos vinculados ao CPF.
+
+Nesse caso, o monitoramento acompanha a existência de novos processos em relação ao snapshot salvo.
+
+Ele não acompanha movimentações internas dos processos encontrados.
+
+<Card title="Monitoramento de processo" icon="gavel" horizontal href="/monitoring/process">
+  Use o monitoramento processual para acompanhar movimentações de um processo específico por número CNJ.
+</Card>
+
+## Eventos
+
+Um evento é registrado quando a Lazy Data identifica uma alteração relevante em uma fonte monitorada.
+
+Exemplos:
+
+- novo processo encontrado para o CPF;
+- mudança no resultado de uma fonte selecionada;
+- alteração em indicador monitorado;
+- snapshot inicial registrado na primeira checagem.
+
+Quando nada muda em uma checagem recorrente, não há evento de novidade para notificar.
+
+## Mudanças por fonte
+
+No detalhe do monitoramento, eventos de pessoa física podem retornar mudanças em `changes`.
+
+Cada mudança pode conter:
+
+| Campo | Descrição |
+| --- | --- |
+| `source_id` | Fonte onde a alteração foi detectada. |
+| `source_name` | Nome amigável da fonte. |
+| `type` | Tipo da mudança, como `initial` ou `update`. |
+| `summary` | Resumo da alteração detectada. |
+| `checked_at` | Data da checagem. |
+| `details` | Detalhes relevantes extraídos da fonte. |
+| `new_process_count` | Quantidade de novos processos, quando a fonte for processual. |
+| `new_processes` | Lista resumida de novos processos, quando aplicável. |
+
+## Notificações
+
+As notificações são enviadas para o e-mail configurado em `notification_email`.
+
+Quando houver mais de uma novidade na mesma checagem, a Lazy Data pode agrupar as alterações em um único e-mail.
+
+Se nenhuma mudança for detectada, nenhuma notificação de novidade é enviada.
+
+## Cobrança
+
+A cobrança ocorre por checagem executada em cada fonte monitorada.
+
+O custo mensal estimado depende de:
+
+- fontes selecionadas;
+- preço por checagem de cada fonte;
+- frequência de cada fonte;
+- descontos e regras comerciais aplicáveis;
+- cobrança condicionada ao retorno, quando configurada.
+
+O retorno do monitoramento expõe:
+
+| Campo | Descrição |
+| --- | --- |
+| `price_per_check` | Preço de referência por checagem no monitoramento. |
+| `checks_count` | Total de checagens executadas. |
+| `events_count` | Total de eventos registrados. |
+| `charged_total` | Valor total debitado. |
+| `last_checked_at` | Data da última checagem. |
+| `next_check_at` | Próxima checagem prevista. |
+
+<Info>
+  Como cada fonte pode ter frequência própria, nem todas as fontes são verificadas em todas as execuções.
+</Info>
+
+## Saldo, plano e limites
+
+Se não houver saldo, limite mensal ou permissão suficiente no momento da checagem, o monitoramento pode ser pausado automaticamente.
+
+Quando a condição for resolvida, monitoramentos recuperáveis podem ser retomados e ter a próxima checagem recalculada.
+
+## Status possíveis
+
+| Status | Descrição |
+| --- | --- |
+| `active` | Monitoramento ativo e elegível para próximas checagens. |
+| `checking` | Checagem em execução. |
+| `paused_insufficient_balance` | Pausado por saldo insuficiente. |
+| `paused_monthly_limit` | Pausado por limite mensal atingido. |
+| `paused_plan_restricted` | Pausado por restrição de plano, conta ou subconta. |
+| `error` | Monitoramento com falha não recuperada. |
+| `canceled` | Monitoramento cancelado e sem novas checagens. |
+
+## Detalhes no painel
+
+Ao abrir os detalhes do monitoramento, o painel pode exibir:
+
+- nome do monitoramento;
+- CPF monitorado;
+- nome da pessoa, quando disponível;
+- e-mail de notificação;
+- fontes monitoradas;
+- frequência de cada fonte;
+- preço e estatísticas por fonte;
+- próxima checagem;
+- checagens realizadas;
+- eventos registrados;
+- últimas mudanças detectadas.
+
+<Card title="Detalhar monitoramento" icon="list-timeline" horizontal href="/api-reference/monitoring/detail">
+  Consulte status, fontes, estatísticas e eventos registrados.
+</Card>
+
+## Cancelamento
+
+Um monitoramento cancelado deixa de gerar novas checagens e novas notificações.
+
+O histórico salvo permanece disponível conforme as regras de retenção da conta.
+
+<Card title="Cancelar monitoramento" icon="circle-xmark" horizontal href="/api-reference/monitoring/cancel">
+  Encerre um monitoramento ativo quando ele não precisar mais ser acompanhado.
+</Card>
+
+## Boas práticas
+
+- Selecione apenas fontes relevantes para o objetivo do acompanhamento.
+- Use frequência diária apenas para fontes críticas.
+- Use frequências maiores para indicadores menos urgentes.
+- Valide o CPF antes de criar o monitoramento.
+- Mantenha o e-mail de notificação atualizado.
+- Monitore saldo e limite mensal para evitar pausas automáticas.
+- Trate `409` como monitoramento já existente e reutilize o `id` retornado.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Configuração" icon="sliders" href="/api-reference/monitoring/person/config">
+    Liste fontes, preços e frequências disponíveis.
+  </Card>
+
+  <Card title="Validar pessoa física" icon="circle-check" href="/api-reference/monitoring/person/validate">
+    Confirme se o CPF pode ser monitorado.
+  </Card>
+
+  <Card title="Criar monitoramento" icon="user-plus" href="/api-reference/monitoring/person/create">
+    Crie o acompanhamento recorrente do CPF.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/monitoring">
+    Consulte erros de CPF, fontes, frequência, cobrança e provedor.
+  </Card>
+</Columns>
+
+Para criar o monitoramento, informe:
+
+| Campo | Descrição |
+| --- | --- |
+| `name` | Nome da pessoa ou nome interno do monitoramento. |
+| `tax_id` | CPF monitorado, com ou sem pontuação. |
+| `sources` | Fontes que serão monitoradas. |
+| `notification_email` | E-mail que receberá alertas. |
+
+Cada fonte recebe sua própria frequência.
+
+```json
+{
+  "name": "PESSOA EXEMPLO DOS SANTOS",
+  "tax_id": "00000000000",
+  "sources": [
+    {
+      "source_id": "person_processes",
+      "frequency_id": "daily"
+    }
+  ],
+  "notification_email": "alertas@example.com"
+}
+```
+
+Ao criar, a checagem inicial é enviada para execução em segundo plano.
+
+## Estrutura de `sources[]`
+
+| Campo | Descrição |
+| --- | --- |
+| `source_id` | ID da fonte retornada na configuração. |
+| `frequency_id` | ID da frequência escolhida em `result.monitoring.frequencies[]`. |
+
+<Note>
+  Uma mesma fonte não deve ser enviada mais de uma vez. Se precisar mudar frequência ou fontes, cancele o monitoramento atual e crie uma nova configuração conforme sua regra operacional.
+</Note>
+
+## Frequência por fonte
+
+No monitoramento de pessoa física, cada fonte pode ter sua própria frequência.
+
+| Fonte | Frequência |
+| --- | --- |
+| Processos | Diário |
+| Protestos | Semanal |
+| Score de crédito | Mensal |
+
+Isso permite acompanhar fontes críticas com maior frequência e fontes menos sensíveis com intervalos maiores.
+
+## Processos vinculados ao CPF
+
+Quando a fonte de processos estiver selecionada, a Lazy Data consulta bases processuais disponíveis para localizar processos vinculados ao CPF.
+
+Nesse caso, o monitoramento acompanha a existência de novos processos em relação ao snapshot salvo.
+
+Ele não acompanha movimentações internas dos processos encontrados.
+
+<Card title="Monitoramento de processo" icon="gavel" horizontal href="/monitoring/process">
+  Use o monitoramento processual para acompanhar movimentações de um processo específico por número CNJ.
+</Card>
+
+## Eventos
+
+Um evento é registrado quando a Lazy Data identifica uma alteração relevante em uma fonte monitorada.
+
+Exemplos:
+
+- novo processo encontrado para o CPF;
+- mudança no resultado de uma fonte selecionada;
+- alteração em indicador monitorado;
+- snapshot inicial registrado na primeira checagem.
+
+Quando nada muda em uma checagem recorrente, não há evento de novidade para notificar.
+
+## Mudanças por fonte
+
+No detalhe do monitoramento, eventos de pessoa física podem retornar mudanças em `changes`.
+
+Cada mudança pode conter:
+
+| Campo | Descrição |
+| --- | --- |
+| `source_id` | Fonte onde a alteração foi detectada. |
+| `source_name` | Nome amigável da fonte. |
+| `type` | Tipo da mudança, como `initial` ou `update`. |
+| `summary` | Resumo da alteração detectada. |
+| `checked_at` | Data da checagem. |
+| `details` | Detalhes relevantes extraídos da fonte. |
+| `new_process_count` | Quantidade de novos processos, quando a fonte for processual. |
+| `new_processes` | Lista resumida de novos processos, quando aplicável. |
+
+## Notificações
+
+As notificações são enviadas para o e-mail configurado em `notification_email`.
+
+Quando houver mais de uma novidade na mesma checagem, a Lazy Data pode agrupar as alterações em um único e-mail.
+
+Se nenhuma mudança for detectada, nenhuma notificação de novidade é enviada.
+
+A cobrança ocorre por checagem executada em cada fonte monitorada.
+
+O custo mensal estimado depende de:
+
+- fontes selecionadas;
+- preço por checagem de cada fonte;
+- frequência de cada fonte;
+- descontos e regras comerciais aplicáveis;
+- cobrança condicionada ao retorno, quando configurada.
+
+O retorno do monitoramento expõe:
+
+| Campo | Descrição |
+| --- | --- |
+| `price_per_check` | Preço de referência por checagem no monitoramento. |
+| `checks_count` | Total de checagens executadas. |
+| `events_count` | Total de eventos registrados. |
+| `charged_total` | Valor total debitado. |
+| `last_checked_at` | Data da última checagem. |
+| `next_check_at` | Próxima checagem prevista. |
+
+<Info>
+  Como cada fonte pode ter frequência própria, nem todas as fontes são verificadas em todas as execuções.
+</Info>
+
+## Saldo, plano e limites
+
+Se não houver saldo, limite mensal ou permissão suficiente no momento da checagem, o monitoramento pode ser pausado automaticamente.
+
+Quando a condição for resolvida, monitoramentos recuperáveis podem ser retomados e ter a próxima checagem recalculada.
+
+| Status | Descrição |
+| --- | --- |
+| `active` | Monitoramento ativo e elegível para próximas checagens. |
+| `checking` | Checagem em execução. |
+| `paused_insufficient_balance` | Pausado por saldo insuficiente. |
+| `paused_monthly_limit` | Pausado por limite mensal atingido. |
+| `paused_plan_restricted` | Pausado por restrição de plano, conta ou subconta. |
+| `error` | Monitoramento com falha não recuperada. |
+| `canceled` | Monitoramento cancelado e sem novas checagens. |
+
+- nome do monitoramento;
+- CPF monitorado;
+- nome da pessoa, quando disponível;
+- e-mail de notificação;
+- fontes monitoradas;
+- frequência de cada fonte;
+- preço e estatísticas por fonte;
+- próxima checagem;
+- checagens realizadas;
+- eventos registrados;
+- últimas mudanças detectadas.
+
+<Card title="Detalhar monitoramento" icon="list-timeline" horizontal href="/api-reference/monitoring/detail">
+  Consulte status, fontes, estatísticas e eventos registrados.
+</Card>
+
+## Cancelamento
+
+Um monitoramento cancelado deixa de gerar novas checagens e novas notificações.
+
+O histórico salvo permanece disponível conforme as regras de retenção da conta.
+
+<Card title="Cancelar monitoramento" icon="circle-xmark" horizontal href="/api-reference/monitoring/cancel">
+  Encerre um monitoramento ativo quando ele não precisar mais ser acompanhado.
+</Card>
+
+- Selecione apenas fontes relevantes para o objetivo do acompanhamento.
+- Use frequência diária apenas para fontes críticas.
+- Use frequências maiores para indicadores menos urgentes.
+- Valide o CPF antes de criar o monitoramento.
+- Mantenha o e-mail de notificação atualizado.
+- Monitore saldo e limite mensal para evitar pausas automáticas.
+- Trate `409` como monitoramento já existente e reutilize o `id` retornado.
+
+<Columns cols={2}>
+  <Card title="Configuração" icon="sliders" href="/api-reference/monitoring/person/config">
+    Liste fontes, preços e frequências disponíveis.
+  </Card>
+
+  <Card title="Validar pessoa física" icon="circle-check" href="/api-reference/monitoring/person/validate">
+    Confirme se o CPF pode ser monitorado.
+  </Card>
+
+  <Card title="Criar monitoramento" icon="user-plus" href="/api-reference/monitoring/person/create">
+    Crie o acompanhamento recorrente do CPF.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/monitoring">
+    Consulte erros de CPF, fontes, frequência, cobrança e provedor.
+  </Card>
+</Columns>

@@ -1,0 +1,321 @@
+---
+title: "Processo"
+description: "Acompanhe novas movimentações de um processo judicial específico."
+sidebarTitle: "Processo"
+keywords: ["monitoramento processual", "processo judicial", "número cnj", "movimentações", "datajud", "lazy data"]
+---
+
+O **monitoramento de processo** acompanha um processo judicial específico a partir do número CNJ e do tribunal responsável.
+
+Use esta funcionalidade para receber alertas quando novas movimentações forem identificadas nas checagens recorrentes, sem depender de consultas manuais repetidas.
+
+<Card title="Criar monitoramento processual" icon="gavel" horizontal href="/api-reference/monitoring/process/create">
+  Veja os parâmetros necessários para criar um monitoramento de processo pela API.
+</Card>
+
+## Quando usar
+
+Use o monitoramento processual quando sua operação precisa acompanhar um processo específico ao longo do tempo.
+
+Casos comuns:
+
+- acompanhar novas movimentações processuais;
+- receber alertas sobre atualização em processo estratégico;
+- centralizar histórico de eventos detectados;
+- reduzir consultas manuais recorrentes;
+- manter acompanhamento operacional de processos sensíveis.
+
+<Warning>
+  O monitoramento processual acompanha um processo específico. Para descobrir processos vinculados a um CPF ou CNPJ, use as consultas processuais ou monitoramentos de pessoa física e pessoa jurídica.
+</Warning>
+
+## Identificador principal
+
+A chave principal é o número do processo no padrão CNJ.
+
+Exemplo:
+
+```text
+0000001-77.2026.8.26.0000
+```
+
+A API aceita o número com ou sem pontuação, mas ele precisa ser estruturalmente válido.
+
+## Tribunal obrigatório
+
+Além do número CNJ, o monitoramento exige `court_code`, que representa o tribunal DataJud onde o processo será validado e acompanhado.
+
+Exemplos de `court_code`:
+
+| Código | Tribunal |
+| --- | --- |
+| `tjsp` | Tribunal de Justiça de São Paulo |
+| `tjba` | Tribunal de Justiça da Bahia |
+| `trf1` | Tribunal Regional Federal da 1ª Região |
+| `stj` | Superior Tribunal de Justiça |
+| `tst` | Tribunal Superior do Trabalho |
+
+<Info>
+  Mesmo que o número CNJ indique o segmento e a origem, o `court_code` deve ser informado na validação e na criação para evitar monitoramento no tribunal incorreto.
+</Info>
+
+## Detectar tribunal
+
+Quando você possui apenas o número do processo, use a detecção de tribunal antes de validar ou criar o monitoramento.
+
+```json
+{
+  "process_number": "0000001-77.2026.8.26.0000"
+}
+```
+
+A resposta retorna o tribunal provável:
+
+```json
+{
+  "court": {
+    "code": "tjsp",
+    "acronym": "TJSP",
+    "name": "Tribunal de Justiça de São Paulo"
+  }
+}
+```
+
+Use `result.court.code` como `court_code`.
+
+<Card title="Detectar tribunal" icon="landmark" horizontal href="/api-reference/monitoring/process/detect-court">
+  Obtenha o `court_code` provável com base no número CNJ.
+</Card>
+
+<Warning>
+  A detecção é baseada na estrutura do número CNJ. Em casos ambíguos, valide o processo no tribunal retornado antes de criar o monitoramento.
+</Warning>
+
+## Fluxo recomendado
+
+<Steps>
+  <Step title="Consulte a configuração">
+    Obtenha preço por checagem e frequências disponíveis para monitoramento processual.
+  </Step>
+  <Step title="Detecte o tribunal">
+    Use o número CNJ para obter o `court_code` provável quando ele ainda não for conhecido.
+  </Step>
+  <Step title="Valide o processo">
+    Confirme que o processo existe no tribunal selecionado antes de criar o monitoramento.
+  </Step>
+  <Step title="Crie o monitoramento">
+    Informe número, tribunal, frequência e e-mail de notificação.
+  </Step>
+  <Step title="Acompanhe eventos">
+    Use o detalhe do monitoramento para consultar checagens, eventos e movimentações salvas.
+  </Step>
+</Steps>
+
+## Configuração
+
+Antes de criar, consulte a configuração do monitoramento processual.
+
+Ela informa:
+
+- preço por checagem;
+- frequências disponíveis;
+- estimativa mensal por frequência;
+- identificador do produto de monitoramento.
+
+<Card title="Configuração" icon="sliders" horizontal href="/api-reference/monitoring/process/config">
+  Consulte preço por checagem e frequências aceitas.
+</Card>
+
+## Validação inicial
+
+Antes da criação, valide se o processo existe no tribunal selecionado.
+
+```json
+{
+  "process_number": "0000001-77.2026.8.26.0000",
+  "court_code": "tjsp"
+}
+```
+
+A validação retorna dados principais do processo, como classe, assunto, grau e tribunal.
+
+<Card title="Validar processo" icon="circle-check" horizontal href="/api-reference/monitoring/process/validate">
+  Confirme que o processo foi encontrado no tribunal informado.
+</Card>
+
+Se o processo não for encontrado, o monitoramento não deve ser criado até que o número ou tribunal seja corrigido.
+
+## Criação do monitoramento
+
+Para criar o monitoramento, informe:
+
+| Campo | Descrição |
+| --- | --- |
+| `process_number` | Número CNJ do processo. |
+| `court_code` | Código público do tribunal DataJud. |
+| `name` | Nome interno para identificar o acompanhamento. |
+| `frequency_id` | Frequência escolhida na configuração. |
+| `notification_email` | E-mail que receberá alertas. |
+
+Exemplo:
+
+```json
+{
+  "process_number": "0000001-77.2026.8.26.0000",
+  "court_code": "tjsp",
+  "name": "Processo cliente exemplo",
+  "frequency_id": "daily",
+  "notification_email": "alertas@example.com"
+}
+```
+
+Ao criar, a Lazy Data executa a verificação inicial, salva o estado base do processo e registra o primeiro evento.
+
+## O que é monitorado
+
+O monitoramento processual acompanha principalmente novas movimentações.
+
+Em cada checagem, a Lazy Data compara o estado atual do processo com o último snapshot salvo. Quando novas movimentações são identificadas, um evento é registrado e uma notificação pode ser enviada.
+
+Eventos podem incluir:
+
+- data da movimentação;
+- descrição da movimentação;
+- código da movimentação, quando disponível;
+- tribunal;
+- número do processo;
+- data da checagem;
+- status de envio da notificação.
+
+## O que não é monitorado em tempo real
+
+Abrir o detalhe do monitoramento não executa uma nova consulta no tribunal.
+
+O detalhe exibe os dados salvos pelo monitoramento e atualizados nas checagens programadas.
+
+<Note>
+  Para forçar uma nova consulta fora da frequência configurada, use os endpoints de consulta processual quando disponíveis para o seu fluxo.
+</Note>
+
+## Frequência
+
+A frequência define o intervalo aproximado entre checagens.
+
+Cada frequência retorna:
+
+| Campo | Descrição |
+| --- | --- |
+| `id` | Valor usado em `frequency_id`. |
+| `name` | Nome amigável exibido ao usuário. |
+| `checks_per_month` | Quantidade estimada de checagens por mês. |
+| `interval_seconds` | Intervalo técnico entre checagens. |
+| `estimated_monthly_cost` | Estimativa mensal considerando o preço por checagem. |
+
+As opções disponíveis podem variar conforme configuração comercial e plano da conta.
+
+## Eventos e notificações
+
+Quando uma nova movimentação é detectada, a Lazy Data registra um evento em `events` e tenta enviar um alerta para `notification_email`.
+
+O detalhe do evento pode conter:
+
+| Campo | Descrição |
+| --- | --- |
+| `type` | Tipo do evento, como `initial` ou mudança detectada. |
+| `created_at` | Data em que o evento foi registrado. |
+| `notification.sent` | Indica se o e-mail foi enviado. |
+| `movements_count` | Quantidade de movimentações associadas ao evento. |
+| `movements` | Lista de movimentações registradas. |
+
+Se nenhuma movimentação nova for encontrada em uma checagem, não há evento de novidade para notificar.
+
+## Cobrança
+
+A cobrança ocorre por checagem executada.
+
+O retorno do monitoramento expõe:
+
+| Campo | Descrição |
+| --- | --- |
+| `price_per_check` | Preço aplicado por checagem. |
+| `checks_count` | Quantidade de checagens executadas. |
+| `events_count` | Quantidade de eventos registrados. |
+| `charged_total` | Valor total debitado no monitoramento. |
+| `last_checked_at` | Data da última checagem. |
+| `next_check_at` | Data prevista para a próxima checagem. |
+
+Se não houver saldo, limite mensal ou permissão suficiente no momento da checagem, o monitoramento pode ser pausado até que a condição seja resolvida.
+
+## Status possíveis
+
+| Status | Descrição |
+| --- | --- |
+| `active` | Monitoramento ativo e elegível para próximas checagens. |
+| `checking` | Checagem em execução. |
+| `paused_insufficient_balance` | Pausado por saldo insuficiente. |
+| `paused_monthly_limit` | Pausado por limite mensal atingido. |
+| `paused_plan_restricted` | Pausado por restrição de plano, conta ou subconta. |
+| `paused_invalid_process` | Pausado após falhas recorrentes ao consultar o processo. |
+| `error` | Monitoramento com falha não recuperada. |
+| `canceled` | Monitoramento cancelado e sem novas checagens. |
+
+## Detalhes no painel
+
+Ao abrir os detalhes do monitoramento, o painel exibe:
+
+- nome do monitoramento;
+- número do processo;
+- tribunal e `court_code`;
+- e-mail de notificação;
+- frequência;
+- preço por checagem;
+- quantidade de checagens;
+- quantidade de eventos;
+- valor total consumido;
+- última e próxima checagem;
+- dados principais do processo;
+- eventos e movimentações salvas.
+
+<Card title="Detalhar monitoramento" icon="list-timeline" horizontal href="/api-reference/monitoring/detail">
+  Consulte status, estatísticas, alvo monitorado e eventos registrados.
+</Card>
+
+## Cancelamento
+
+Um monitoramento cancelado deixa de gerar novas checagens e novas notificações.
+
+O histórico salvo permanece disponível conforme as regras de retenção da conta.
+
+<Card title="Cancelar monitoramento" icon="circle-xmark" horizontal href="/api-reference/monitoring/cancel">
+  Encerre um monitoramento ativo quando ele não precisar mais ser acompanhado.
+</Card>
+
+## Boas práticas
+
+- Use um nome de monitoramento fácil de identificar.
+- Detecte o tribunal quando tiver apenas o número CNJ.
+- Valide o processo com `court_code` antes de criar.
+- Use um e-mail monitorado pela equipe responsável.
+- Escolha frequências menores apenas para processos críticos.
+- Monitore saldo e limite mensal para evitar pausas automáticas.
+- Trate `409` como monitoramento já existente e reutilize o `id` retornado.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Detectar tribunal" icon="landmark" href="/api-reference/monitoring/process/detect-court">
+    Obtenha o `court_code` provável a partir do número CNJ.
+  </Card>
+
+  <Card title="Validar processo" icon="circle-check" href="/api-reference/monitoring/process/validate">
+    Confirme que o processo existe no tribunal informado.
+  </Card>
+
+  <Card title="Criar monitoramento" icon="gavel" href="/api-reference/monitoring/process/create">
+    Crie o acompanhamento recorrente do processo.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/monitoring">
+    Consulte erros de processo, tribunal, frequência, cobrança e provedor.
+  </Card>
+</Columns>

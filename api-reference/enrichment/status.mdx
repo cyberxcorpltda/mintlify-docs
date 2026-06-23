@@ -1,0 +1,144 @@
+---
+title: "Consultar status"
+description: "Consulte status, progresso, análise, configuração, custo e saídas de um enriquecimento."
+sidebarTitle: "Consultar status"
+api: "GET /v1/enrichment/{enrichment_id}"
+playground: "interactive"
+keywords: ["status enriquecimento", "consultar enriquecimento", "progresso enriquecimento", "lazy data"]
+---
+
+Retorna os detalhes de um enriquecimento específico.
+
+Use esta rota após o upload para verificar se o arquivo já foi analisado, durante a execução para acompanhar progresso, e após a conclusão para identificar os arquivos de saída disponíveis.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Status do enriquecimento carregado.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "type": "pf",
+    "name": "Base de clientes",
+    "status": "waiting_configuration",
+    "status_label": "Aguardando configuração",
+    "status_badge": "warning",
+    "resume_step": "preview",
+    "file": {
+      "id": "5cfa31286c4a3c4a5d1e0dd1b6930c9d",
+      "name": "base-clientes.csv",
+      "extension": "csv",
+      "content_type": "text/csv",
+      "size": 24576,
+      "uploaded_at": "2026-06-22T12:00:00+00:00",
+      "total_rows": 120
+    },
+    "progress": {
+      "stage": "waiting_configuration",
+      "stage_label": "Arquivo pronto para mapeamento",
+      "percent": 100,
+      "uploaded_bytes": 24576,
+      "total_bytes": 24576,
+      "total_rows": 120,
+      "processed_rows": 0,
+      "enriched_documents": 0,
+      "invalid_documents": 0,
+      "not_found_documents": 0,
+      "failed_rows": 0
+    },
+    "analysis": {
+      "status": "completed",
+      "has_header": true,
+      "delimiter": ",",
+      "document_column": 0,
+      "document_column_name": "cpf",
+      "confidence": 0.98,
+      "columns": [
+        {
+          "index": 0,
+          "name": "cpf",
+          "sample": "00000000000"
+        }
+      ],
+      "sample_rows": [],
+      "notes": []
+    },
+    "configuration": {
+      "document_column": null,
+      "document_column_name": null,
+      "datasets": [],
+      "additional": {}
+    },
+    "cost": {
+      "estimated": 0,
+      "reserved": 0,
+      "consumed": 0,
+      "refunded": 0,
+      "datasets": {}
+    },
+    "outputs": {},
+    "created_at": "2026-06-22T11:59:40+00:00",
+    "last_updated_at": "2026-06-22T12:00:00+00:00"
+  }
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Enriquecimento não localizado."
+}
+```
+
+</ResponseExample>
+
+## Parâmetros
+
+<ParamField path="enrichment_id" type="string" required>
+  ID do enriquecimento.
+</ParamField>
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da operação.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Detalhes do enriquecimento.
+</ResponseField>
+
+## Campos principais
+
+| Campo | Descrição |
+| --- | --- |
+| `status` | Status atual do enriquecimento. |
+| `file` | Metadados do arquivo enviado. |
+| `progress` | Progresso de upload, análise ou execução. |
+| `analysis` | Colunas identificadas, amostras e sugestão de coluna de documento. |
+| `configuration` | Coluna e datasets configurados para execução. |
+| `cost` | Valor estimado, reservado, consumido, estornado e preços por dataset. |
+| `outputs` | Arquivos de saída disponíveis após o processamento. |
+
+## Quando consultar
+
+- Após o upload, consulte até `status` chegar em `waiting_configuration`.
+- Durante execução, consulte até `status` chegar em `completed`, `completed_with_errors` ou `failed`.
+- Após conclusão, leia `outputs` para saber quais arquivos podem ser baixados.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Configurar e executar" icon="play" href="/api-reference/enrichment/start">
+    Inicie o processamento após o arquivo estar em `waiting_configuration`.
+  </Card>
+
+  <Card title="Arquivos de saída" icon="download" href="/api-reference/enrichment/outputs">
+    Baixe os arquivos finais quando o enriquecimento for concluído.
+  </Card>
+</Columns>

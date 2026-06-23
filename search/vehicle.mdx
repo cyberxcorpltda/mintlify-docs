@@ -1,0 +1,253 @@
+---
+title: "Veículos"
+keywords: ["consulta veicular", "veículos", "placa", "renavam", "dados veiculares", "lazy data"]
+description: "Consulte dados veiculares a partir da placa usando datasets da Lazy Data."
+sidebarTitle: "Veículos"
+---
+
+A consulta de **veículos** permite buscar informações associadas a uma placa, como dados cadastrais, características, restrições e indicadores disponíveis nos datasets contratados.
+
+Use esta funcionalidade para validação veicular, análise de risco, antifraude, conferência cadastral e automação de fluxos operacionais envolvendo veículos.
+
+## Forma de consulta
+
+<Card title="Busca por placa" icon="car" horizontal href="/api-reference/search/vehicle/by-plate">
+  Consulte uma placa nos datasets veiculares selecionados.
+</Card>
+
+## Endpoints disponíveis
+
+| Recurso | Método | Endpoint | Uso principal |
+| --- | --- | --- | --- |
+| Busca por placa | `POST` | `/v1/search/vehicle` | Consulta datasets veiculares a partir de uma placa. |
+| Datasets e preços | `GET` | `/v1/search/datasets/vehicle` | Lista datasets veiculares disponíveis, preço aplicado e estrutura de retorno. |
+| Resultado assíncrono | `GET` | `/v1/search/vehicle/{id}` | Consulta o andamento e o resultado final de uma busca veicular assíncrona. |
+
+## Consulta por placa
+
+A consulta veicular usa o campo `plate` como identificador e executa um ou mais datasets informados em `datasets`.
+
+```json
+{
+  "plate": "ABC0A00",
+  "mode": "async",
+  "datasets": ["vehicle_basic_data"],
+  "additional": {}
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+| --- | --- | --- | --- |
+| `plate` | `string` | Sim | Placa do veículo no formato antigo ou Mercosul. Pode ser enviada com ou sem hífen. |
+| `mode` | `string` | Não | Modo da consulta. Aceita `async` ou `sync`. O padrão recomendado é `async`. |
+| `datasets` | `array<string>` | Sim | Lista de IDs dos datasets veiculares que serão consultados. |
+| `additional` | `object` | Não | Dados adicionais por dataset, quando algum dataset exigir parâmetros extras. |
+
+<Note>
+  Liste os datasets disponíveis em [Datasets e preços](/api-reference/search/datasets) usando `target: vehicle`.
+</Note>
+
+## Formato da placa
+
+O campo `plate` aceita placas brasileiras no formato antigo e no padrão Mercosul.
+
+| Formato | Exemplo estrutural | Descrição |
+| --- | --- | --- |
+| Antigo | `ABC1234` | Três letras seguidas de quatro números. |
+| Mercosul | `ABC1D23` | Três letras, um número, uma letra e dois números. |
+
+A API normaliza o valor antes da consulta, removendo hífen, espaços e pontuação.
+
+Exemplos aceitos:
+
+```text
+ABC1234
+ABC-1234
+ABC1D23
+ABC-1D23
+```
+
+## Modos de execução
+
+| Modo | Descrição |
+| --- | --- |
+| `async` | Inicia a consulta e retorna um `id` para acompanhar o processamento depois. É o modo recomendado para consultas com fontes online. |
+| `sync` | Aguarda a conclusão da consulta e retorna os dados diretamente na resposta. |
+
+Consultas assíncronas podem passar pelos seguintes status:
+
+| Status | Descrição |
+| --- | --- |
+| `queued` | Consulta criada e aguardando processamento. |
+| `processing` | Consulta em processamento. |
+| `completed` | Consulta finalizada. Verifique o resultado, erros e status por dataset. |
+| `failed` | Consulta finalizada com falha geral. |
+
+Para consultar o resultado final, use o endpoint de [resultado assíncrono](/api-reference/search/async-result) com `target: vehicle`.
+
+## Datasets veiculares
+
+Os datasets veiculares disponíveis podem variar conforme plano, permissões e configuração comercial da conta.
+
+<Card title="Datasets e preços" icon="database" horizontal href="/api-reference/search/datasets">
+  Consulte os datasets veiculares disponíveis usando `target: vehicle`.
+</Card>
+
+<Warning>
+  Use apenas datasets com `active: true`. Datasets inativos ou indisponíveis para a conta podem retornar erro.
+</Warning>
+
+## Dados adicionais por dataset
+
+Alguns datasets veiculares podem exigir parâmetros complementares. Esses campos aparecem em `additional_fields` no endpoint de [Datasets e preços](/api-reference/search/datasets).
+
+Quando exigidos, envie os dados em `additional`, usando o ID do dataset como chave:
+
+```json
+{
+  "plate": "ABC0A00",
+  "mode": "async",
+  "datasets": ["vehicle_example_dataset"],
+  "additional": {
+    "vehicle_example_dataset": {
+      "state": "SP"
+    }
+  }
+}
+```
+
+<Info>
+  O dataset acima é fictício e serve apenas para demonstrar a estrutura de envio de dados adicionais.
+</Info>
+
+## Retorno inicial assíncrono
+
+Quando `mode` for `async`, a API inicia a consulta em segundo plano e retorna um identificador para acompanhamento.
+
+```json
+{
+  "code": 202,
+  "message": "Consulta iniciada com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "queued",
+    "status_values": ["queued", "processing", "completed", "failed"],
+    "datasets": ["vehicle_basic_data"]
+  }
+}
+```
+
+## Resultado final
+
+Quando a consulta for finalizada, o endpoint de resultado assíncrono retorna a estrutura completa da busca.
+
+```json
+{
+  "code": 200,
+  "message": "Consulta realizada com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "completed",
+    "target": "vehicle",
+    "query": {
+      "plate": "ABC0A00",
+      "datasets": ["vehicle_basic_data"],
+      "additional": {}
+    },
+    "cost": {
+      "total": 0.12,
+      "refunded": 0,
+      "datasets": {
+        "vehicle_basic_data": {
+          "charged": 0.12,
+          "refunded": 0
+        }
+      }
+    },
+    "timing": {
+      "total": 1.84,
+      "datasets": {
+        "vehicle_basic_data": 1.84
+      }
+    },
+    "errors": {},
+    "datasets_status": {
+      "vehicle_basic_data": "completed"
+    },
+    "result": {
+      "vehicle_basic_data": {
+        "plate": "ABC0A00",
+        "state": "SP",
+        "city": "São Paulo",
+        "brand": "MARCA EXEMPLO",
+        "model": "MODELO EXEMPLO",
+        "manufacture_year": "2020",
+        "model_year": "2021",
+        "fuel": "FLEX",
+        "color": "PRATA",
+        "vehicle_type": "AUTOMOVEL",
+        "status": "EM CIRCULACAO"
+      }
+    },
+    "created_at": "2026-06-22T12:00:00Z",
+    "last_updated_at": "2026-06-22T12:00:02Z"
+  }
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `query` | Placa, datasets e campos adicionais usados na consulta. |
+| `cost` | Valores debitados e estornados por dataset. |
+| `timing` | Tempo total e tempo individual por dataset, quando disponível. |
+| `errors` | Erros por dataset, quando ocorrerem. |
+| `datasets_status` | Status individual de cada dataset consultado. |
+| `result` | Dados retornados por cada dataset veicular. |
+
+<Warning>
+  Campos descritos na estrutura dos datasets podem não aparecer em todas as consultas. A disponibilidade depende da placa consultada, da fonte e do dataset selecionado.
+</Warning>
+
+## Ambiente de teste
+
+A consulta veicular tem suporte ao ambiente de teste.
+
+Para executar uma chamada sem consumo de saldo, envie o header:
+
+```http
+x-ambient: sandbox
+```
+
+<Card title="Ambiente de teste" icon="flask" horizontal href="/quickstart/sandbox">
+  Veja como usar o header de sandbox e validar integrações sem consumir saldo.
+</Card>
+
+## Regras importantes
+
+- A placa deve estar em formato antigo ou Mercosul válido.
+- A API remove hífen, espaços e pontuação antes de validar a placa.
+- Campos fora do schema documentado são rejeitados pela validação da API.
+- Datasets indisponíveis, inativos ou não permitidos para a conta podem retornar erro.
+- Consultas com múltiplos datasets podem retornar resultados parciais caso algum dataset falhe.
+- A cobrança é calculada com base nos datasets efetivamente executados, conforme as regras comerciais da conta.
+- Campos nulos, vazios ou indisponíveis podem ser omitidos da resposta.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Busca por placa" icon="car" href="/api-reference/search/vehicle/by-plate">
+    Veja os parâmetros e respostas da consulta veicular.
+  </Card>
+
+  <Card title="Resultado assíncrono" icon="clock" href="/api-reference/search/async-result">
+    Consulte o andamento e o resultado final de uma consulta veicular.
+  </Card>
+
+  <Card title="Datasets e preços" icon="database" href="/api-reference/search/datasets">
+    Liste os datasets veiculares disponíveis e os preços aplicados.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/search">
+    Consulte os erros relacionados a consultas.
+  </Card>
+</Columns>

@@ -1,0 +1,239 @@
+---
+title: "Pessoa jurídica"
+keywords: ["consulta pessoa jurídica", "consulta cnpj", "cnpj", "datasets pj", "busca por telefone", "busca por email", "lazy data"]
+description: "Consulte dados vinculados a CNPJ usando datasets e buscas especializadas da Lazy Data."
+sidebarTitle: "Pessoa jurídica"
+---
+
+A consulta de **pessoa jurídica** permite buscar informações vinculadas a CNPJ e localizar empresas por dados auxiliares, como razão social, nome fantasia, endereço, telefone ou e-mail.
+
+Use esta funcionalidade para validação cadastral, análise de risco, prospecção, compliance, análise de crédito, cobrança, antifraude e automação de fluxos operacionais.
+
+## Formas de consulta
+
+<Columns cols={2}>
+  <Card title="Busca por CNPJ" icon="building" href="/api-reference/search/company/by-cnpj">
+    Consulte um CNPJ nos datasets selecionados e receba o retorno agrupado por dataset.
+  </Card>
+
+  <Card title="Busca avançada" icon="magnifying-glass" href="/api-reference/search/company/advanced">
+    Localize empresas por razão social, nome fantasia, CNPJ, endereço, UF ou CEP.
+  </Card>
+
+  <Card title="Busca por telefone" icon="phone" href="/api-reference/search/company/phone">
+    Encontre possíveis empresas vinculadas a um telefone com DDD.
+  </Card>
+
+  <Card title="Busca por e-mail" icon="envelope" href="/api-reference/search/company/email">
+    Encontre possíveis empresas vinculadas a um endereço de e-mail.
+  </Card>
+</Columns>
+
+## Endpoints disponíveis
+
+| Recurso | Método | Endpoint | Uso principal |
+| --- | --- | --- | --- |
+| Busca por CNPJ | `POST` | `/v1/search/company` | Consulta datasets de pessoa jurídica a partir de um CNPJ. |
+| Busca avançada | `POST` | `/v1/search/company/advanced` | Busca paginada por dados cadastrais, endereço ou CNPJ. |
+| Busca por telefone | `POST` | `/v1/search/company/phone` | Busca paginada por telefone com DDD. |
+| Busca por e-mail | `POST` | `/v1/search/company/email` | Busca paginada por e-mail. |
+| Datasets e preços | `GET` | `/v1/search/datasets/company` | Lista datasets disponíveis, preço aplicado e estrutura de retorno. |
+| Resultado assíncrono | `GET` | `/v1/search/company/{id}` | Consulta o resultado de uma busca por CNPJ iniciada em modo assíncrono. |
+
+## Busca por CNPJ com datasets
+
+A busca por CNPJ é a consulta principal de pessoa jurídica. Ela usa o campo `taxid` como identificador e executa um ou mais datasets informados em `datasets`.
+
+```json
+{
+  "taxid": "00000000000000",
+  "mode": "async",
+  "datasets": ["company_basic_data"],
+  "additional": {}
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+| --- | --- | --- | --- |
+| `taxid` | `string` | Sim | CNPJ consultado. Pode ser enviado com ou sem pontuação. |
+| `mode` | `string` | Não | Modo da consulta. Aceita `async` ou `sync`. O padrão recomendado é `async`. |
+| `datasets` | `array<string>` | Sim | Lista de IDs dos datasets de pessoa jurídica que serão consultados. |
+| `additional` | `object` | Não | Dados adicionais por dataset, quando algum dataset exigir parâmetros extras. |
+
+<Note>
+  Liste os datasets disponíveis em [Datasets e preços](/api-reference/search/datasets) usando `target: company`.
+</Note>
+
+## Modos de execução
+
+| Modo | Descrição |
+| --- | --- |
+| `async` | Inicia a consulta e retorna um `id` para acompanhar o processamento depois. É o modo recomendado para consultas com múltiplos datasets ou fontes online. |
+| `sync` | Aguarda a conclusão da consulta e retorna os dados diretamente na resposta. |
+
+Consultas assíncronas podem passar pelos seguintes status:
+
+| Status | Descrição |
+| --- | --- |
+| `queued` | Consulta criada e aguardando processamento. |
+| `processing` | Consulta em processamento. |
+| `completed` | Consulta finalizada. Verifique o resultado, erros e status por dataset. |
+| `failed` | Consulta finalizada com falha geral. |
+
+Para consultar o resultado final, use o endpoint de [resultado assíncrono](/api-reference/search/async-result) com `target: company`.
+
+## Buscas paginadas
+
+As rotas de busca avançada, telefone e e-mail retornam listas paginadas. Elas não usam `datasets`, porque cada rota já representa uma busca específica.
+
+### Busca avançada
+
+Use quando você não possui todos os dados da empresa ou precisa localizar empresas por filtros cadastrais.
+
+```json
+{
+  "name": "EMPRESA EXEMPLO LTDA",
+  "uf": "SP",
+  "similar_name": true,
+  "page": 1
+}
+```
+
+Campos aceitos:
+
+| Campo | Descrição |
+| --- | --- |
+| `taxid` | CNPJ da empresa. Pontuação é removida automaticamente. |
+| `name` | Razão social. |
+| `fantasy` | Nome fantasia. |
+| `address` | Logradouro ou parte do endereço. |
+| `uf` | Sigla da unidade federativa com 2 letras. |
+| `zipcode` | CEP com 8 dígitos. |
+| `similar_name` | Quando `true`, permite busca aproximada por razão social ou nome fantasia. |
+| `page` | Página dos resultados. Use valores a partir de `1`. |
+
+### Busca por telefone
+
+Use quando você possui um telefone com DDD e precisa localizar possíveis empresas vinculadas a ele.
+
+```json
+{
+  "phone": "1133334444",
+  "page": 1
+}
+```
+
+O telefone aceita pontuação e prefixo `55`. A API normaliza o valor antes da consulta.
+
+### Busca por e-mail
+
+Use quando você possui um endereço de e-mail e precisa localizar possíveis empresas vinculadas a ele.
+
+```json
+{
+  "email": "contato@example.com",
+  "page": 1
+}
+```
+
+O e-mail é normalizado para letras minúsculas antes da consulta.
+
+## Retorno das buscas paginadas
+
+As buscas avançada, por telefone e por e-mail retornam a mesma estrutura base:
+
+```json
+{
+  "code": 200,
+  "message": "Consulta realizada com sucesso.",
+  "result": {
+    "items": [],
+    "has_more": false,
+    "page": 1,
+    "price": 0.09,
+    "charged": 0.09,
+    "debit_only_if_found": false,
+    "time": 0.42,
+    "test": false
+  }
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `items` | Registros encontrados para os filtros enviados. |
+| `has_more` | Indica se existe próxima página disponível. |
+| `page` | Página retornada. |
+| `price` | Preço da busca para a conta autenticada. |
+| `charged` | Valor debitado nesta chamada. Em sandbox, retorna `0`. |
+| `debit_only_if_found` | Indica se a cobrança ocorre apenas quando houver resultado útil. |
+| `time` | Tempo de execução em segundos. |
+| `test` | Indica se a chamada foi executada em ambiente de teste. |
+
+## Dados adicionais por dataset
+
+Alguns datasets de busca por CNPJ podem exigir parâmetros complementares. Esses campos aparecem em `additional_fields` no endpoint de [Datasets e preços](/api-reference/search/datasets).
+
+Quando exigidos, envie os dados em `additional`, usando o ID do dataset como chave:
+
+```json
+{
+  "taxid": "00000000000000",
+  "mode": "async",
+  "datasets": ["company_example_dataset"],
+  "additional": {
+    "company_example_dataset": {
+      "state": "SP"
+    }
+  }
+}
+```
+
+<Info>
+  O dataset acima é fictício e serve apenas para demonstrar a estrutura de envio de dados adicionais.
+</Info>
+
+## Ambiente de teste
+
+As consultas de pessoa jurídica têm suporte ao ambiente de teste.
+
+Para executar uma chamada sem consumo de saldo, envie o header:
+
+```http
+x-ambient: sandbox
+```
+
+<Card title="Ambiente de teste" icon="flask" horizontal href="/quickstart/sandbox">
+  Veja como usar o header de sandbox e validar integrações sem consumir saldo.
+</Card>
+
+## Regras importantes
+
+- O CNPJ deve ser válido para buscas por CNPJ.
+- A busca avançada exige ao menos um filtro válido.
+- Campos fora do schema documentado são rejeitados pela validação da API.
+- Datasets indisponíveis, inativos ou não permitidos para a conta podem retornar erro.
+- Consultas com múltiplos datasets podem retornar resultados parciais caso algum dataset falhe.
+- A cobrança é calculada com base nos datasets ou buscas efetivamente executados, conforme as regras comerciais da conta.
+- Alguns campos descritos nos datasets podem não ser retornados em todas as consultas.
+- Alguns dados podem estar indisponíveis por regra legal, restrição de disponibilidade ou ausência de informação na base.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Datasets e preços" icon="database" href="/api-reference/search/datasets">
+    Liste os datasets disponíveis para pessoa jurídica e veja preço, campos adicionais e estrutura de retorno.
+  </Card>
+
+  <Card title="Resultado assíncrono" icon="clock" href="/api-reference/search/async-result">
+    Consulte o andamento e o resultado final de uma consulta iniciada em modo assíncrono.
+  </Card>
+
+  <Card title="Pessoa física" icon="user" href="/search/person">
+    Veja como consultar dados vinculados a CPF.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/search">
+    Consulte os erros relacionados a consultas.
+  </Card>
+</Columns>

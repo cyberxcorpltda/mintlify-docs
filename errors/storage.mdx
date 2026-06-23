@@ -1,0 +1,195 @@
+---
+title: "Armazenamento"
+description: "Códigos de erro relacionados a pastas, arquivos, upload assinado, cota e download do armazenamento."
+keywords: ["erro armazenamento", "storage lazy data", "arquivos", "pastas", "download", "upload", "códigos de erro lazy data"]
+sidebarTitle: "Armazenamento"
+---
+
+Esta página lista os principais erros retornados pelos recursos de **armazenamento** da Lazy Data.
+
+Esses erros podem ocorrer ao listar itens, criar pastas, preparar upload, enviar arquivos para `upload.lazydata.com.br`, gerar links de download, renomear ou excluir itens.
+
+## Estrutura do erro
+
+Os erros de armazenamento seguem o contrato base da API:
+
+```json
+{
+  "code": 403,
+  "message": "Seu plano atual não possui armazenamento habilitado."
+}
+```
+
+<ResponseField name="code" type="integer" required>
+  Código HTTP retornado pela operação.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva do erro. Pode ser exibida ao usuário ou registrada em logs.
+</ResponseField>
+
+<ResponseField name="result" type="object | null">
+  Detalhes adicionais do erro, quando houver. Em muitos erros de armazenamento este campo não é retornado.
+</ResponseField>
+
+<Note>
+  Nos endpoints de armazenamento, o campo `code` normalmente corresponde ao status HTTP da resposta. Diferente de algumas consultas, estes erros não usam códigos internos específicos.
+</Note>
+
+## Exemplos de resposta
+
+<ResponseExample>
+
+```json 400
+{
+  "code": 400,
+  "message": "Nome do arquivo inválido."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Assinatura de upload expirada."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "Limite de armazenamento excedido."
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Arquivo não localizado."
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "Já existe um item com este nome nesta pasta."
+}
+```
+
+```json 413
+{
+  "code": 413,
+  "message": "O arquivo deve ter no máximo 1 GB."
+}
+```
+
+```json 500
+{
+  "code": 500,
+  "message": "Não foi possível salvar o arquivo no armazenamento."
+}
+```
+
+</ResponseExample>
+
+## Autenticação e permissões
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `401` | Informe a credencial da API no header Authorization. | O header `Authorization` não foi enviado ou não usa Bearer token. |
+| `401` | Credencial da API inválida. | A chave enviada não pôde ser autenticada. |
+| `403` | A credencial da API não possui permissão para este recurso. | A credencial não possui o escopo `storage`. |
+| `403` | Sua subconta não possui acesso ao armazenamento. | A operação foi feita por subconta sem recurso de armazenamento habilitado. |
+
+## Plano e cota
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `403` | Seu plano atual não possui armazenamento habilitado. | O plano da conta não possui cota de armazenamento. |
+| `403` | Limite de armazenamento excedido. | A conta não possui espaço livre disponível. |
+| `403` | O arquivo excede o espaço disponível no armazenamento. | O tamanho do arquivo ultrapassa o espaço restante da conta. |
+
+## Pastas
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `400` | Nome da pasta inválido. | O nome ficou vazio ou inválido após normalização. |
+| `404` | Pasta não localizada. | A pasta informada não existe, foi excluída ou não pertence à conta autenticada. |
+| `409` | Já existe uma pasta com este nome. | Já existe uma pasta ativa com o mesmo nome na mesma pasta pai. |
+| `409` | Aguarde o upload em andamento antes de excluir esta pasta. | A pasta contém upload em andamento e ainda não pode ser excluída. |
+
+## Arquivos e itens
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `400` | Nome inválido. | O novo nome informado para renomear um item é inválido. |
+| `400` | Nome do arquivo inválido. | O nome usado para preparar upload ficou vazio ou inválido após normalização. |
+| `400` | Arquivo vazio ou inválido. | O arquivo enviado no serviço de upload não possui conteúdo válido. |
+| `404` | Item não localizado. | O arquivo ou pasta usado na operação não existe, não está no status esperado ou não pertence à conta. |
+| `404` | Arquivo não localizado. | O arquivo não existe, não está com status `uploaded` ou não pertence à conta. |
+| `404` | Arquivo não localizado ou já enviado. | A assinatura aponta para um registro que não está mais aguardando upload. |
+| `409` | Já existe um item com este nome nesta pasta. | Renomear criaria conflito com item de mesmo tipo e nome na pasta. |
+| `409` | Já existe um arquivo com este nome nesta pasta. | Já existe arquivo enviado com o mesmo nome na pasta de destino. |
+| `409` | Este arquivo não está disponível para upload. | O arquivo não está mais em `waiting_upload` ou outro processo assumiu o envio. |
+
+## Upload assinado
+
+Erros desta seção ocorrem no serviço de upload:
+
+```text
+https://upload.lazydata.com.br/storage
+```
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `400` | O arquivo enviado não corresponde ao arquivo assinado. | O nome do arquivo enviado é diferente do nome usado ao preparar o upload. |
+| `401` | Assinatura de upload ausente ou inválida. | O header `X-LazyData-Upload-Signature` não foi enviado ou está malformado. |
+| `401` | Assinatura de upload inválida. | A assinatura não confere com o payload assinado. |
+| `401` | Assinatura de upload expirada. | A assinatura temporária expirou antes do envio. |
+| `413` | O arquivo deve ter no máximo 1 GB. | O arquivo excede o limite máximo permitido. |
+| `500` | Não foi possível receber o arquivo enviado. | Falha inesperada ao receber o stream do upload. |
+| `500` | Não foi possível salvar o arquivo no armazenamento. | O arquivo foi recebido, mas falhou ao salvar no storage. |
+
+<Warning>
+  Se o upload falhar por assinatura expirada, arquivo divergente ou falha no envio, gere uma nova assinatura antes de tentar novamente.
+</Warning>
+
+## Download
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `404` | Arquivo não localizado. | O arquivo não existe, não pertence à conta ou não está disponível para download. |
+
+## Exclusão
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `404` | Arquivo não localizado. | O arquivo informado para exclusão não foi encontrado. |
+| `404` | Pasta não localizada. | A pasta informada para exclusão não foi encontrada. |
+| `409` | Aguarde o upload em andamento antes de excluir esta pasta. | A pasta possui arquivo em `receiving_upload`. |
+
+<Note>
+  A exclusão é assíncrona. A resposta `202` indica que a exclusão foi iniciada, não que todos os objetos já foram removidos do storage.
+</Note>
+
+## Validação de payload
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `422` | Validação do payload falhou. | Campo obrigatório ausente, tipo inválido, limite de tamanho excedido ou parâmetro fora do schema da API reference. |
+
+## Tratamento recomendado
+
+<Steps>
+  <Step title="Trate autenticação e escopo primeiro">
+    Para `401` e `403`, valide a credencial, o escopo `storage`, a restrição de IP e o plano da conta.
+  </Step>
+  <Step title="Valide nomes e destino antes de enviar">
+    Confirme `name`, `parent_id` e duplicidade na pasta antes de preparar upload ou criar pasta.
+  </Step>
+  <Step title="Gere uma nova assinatura em falhas de upload">
+    Assinaturas expiradas, inválidas ou já usadas não devem ser reaproveitadas.
+  </Step>
+  <Step title="Monitore cota antes de uploads grandes">
+    Use a listagem de itens para ler `summary.available_bytes` antes de preparar ou enviar arquivos grandes.
+  </Step>
+</Steps>

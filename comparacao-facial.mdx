@@ -1,0 +1,229 @@
+---
+title: "Comparação facial"
+description: "Compare duas imagens faciais e retorne similaridade, confiança, status e cobrança aplicada."
+sidebarTitle: "Comparação facial"
+api: "POST /v1/validation/facial/compare"
+playground: "interactive"
+---
+
+Executa uma comparação facial entre duas imagens e retorna se as faces atingiram a similaridade mínima configurada.
+
+Use esta rota para validação de identidade, antifraude, onboarding, revisão cadastral e fluxos que precisam comparar uma imagem de referência com uma imagem enviada pelo usuário.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Validação facial concluída com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "completed",
+    "test": false,
+    "cost": {
+      "total": 0.05,
+      "charged": 0.05,
+      "refunded": 0
+    },
+    "timing": {
+      "total": 1.24
+    },
+    "comparison": {
+      "matched": true,
+      "similarity": 97.42,
+      "confidence": 99.12,
+      "threshold": 80,
+      "source_face": {
+        "confidence": 99.9,
+        "bounding_box": {
+          "width": 0.15,
+          "height": 0.19,
+          "left": 0.38,
+          "top": 0.26
+        }
+      },
+      "target_face": {
+        "confidence": 99.7,
+        "bounding_box": {
+          "width": 0.16,
+          "height": 0.2,
+          "left": 0.37,
+          "top": 0.27
+        }
+      },
+      "unmatched_faces": 0
+    }
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Imagem inválida."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso."
+}
+```
+
+```json 502
+{
+  "code": 502,
+  "message": "Não foi possível consultar o provedor da validação."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="source_image" type="string" required>
+  Imagem base usada como referência na comparação. Aceita Base64 puro ou Data URL.
+</ParamField>
+
+<ParamField body="target_image" type="string" required>
+  Imagem comparada com a imagem base. Aceita Base64 puro ou Data URL.
+</ParamField>
+
+<ParamField body="threshold" default="80" type="number">
+  Similaridade mínima, de `0` a `100`, para considerar as faces compatíveis.
+</ParamField>
+
+<ParamField header="x-ambient" type="string" placeholder="sandbox">
+  Use `sandbox` para executar uma chamada de teste sem consumo de saldo.
+</ParamField>
+
+<Note>
+  Para detalhes sobre chamadas de teste, consulte [Ambiente de teste](/quickstart/sandbox).
+</Note>
+
+## Exemplo de corpo
+
+```json
+{
+  "source_image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
+  "target_image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
+  "threshold": 80
+}
+```
+
+## Regras das imagens
+
+| Regra | Descrição |
+| --- | --- |
+| Formatos aceitos | JPG, PNG ou WebP. |
+| Envio | Base64 puro ou Data URL com prefixo de MIME type. |
+| Limite | Até 10 MB por imagem. |
+| Face detectável | Cada imagem deve conter uma face detectável pelo provedor. |
+| Qualidade | Imagens muito escuras, desfocadas, cortadas ou com múltiplas faces podem gerar falha ou baixa confiança. |
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta da API.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da resposta.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Objeto principal com o identificador da validação, cobrança, tempo de execução e resultado da comparação.
+</ResponseField>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador único da validação. |
+| `status` | `string` | Status da execução. Para esta rota, normalmente `completed`. |
+| `test` | `boolean` | Indica se a chamada foi executada em ambiente de teste. |
+| `cost` | `object` | Valores cobrados ou estornados. |
+| `timing` | `object` | Tempo de execução em segundos. |
+| `comparison` | `object` | Resultado técnico da comparação facial. |
+
+## Estrutura de `result.cost`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `total` | `number` | Valor total da validação. |
+| `charged` | `number` | Valor debitado nesta chamada. Em sandbox, retorna `0`. |
+| `refunded` | `number` | Valor estornado, quando houver. |
+
+## Estrutura de `result.timing`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `total` | `number` | Tempo total de execução em segundos. |
+
+## Estrutura de `result.comparison`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `matched` | `boolean` | Indica se a similaridade atingiu o `threshold` informado. |
+| `similarity` | `number` | Percentual de similaridade entre as faces comparadas. |
+| `confidence` | `number` | Menor confiança entre as faces usadas na comparação. |
+| `threshold` | `number` | Similaridade mínima usada na validação. |
+| `source_face` | `object` | Dados da face detectada na imagem base. |
+| `target_face` | `object` | Dados da face detectada na imagem comparada. |
+| `unmatched_faces` | `integer` | Quantidade de faces detectadas que não foram compatíveis. |
+
+## Estrutura de `source_face` e `target_face`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `confidence` | `number` | Confiança de detecção da face. |
+| `bounding_box` | `object` | Coordenadas proporcionais da face na imagem. |
+
+## Estrutura de `bounding_box`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `width` | `number` | Largura proporcional da face. |
+| `height` | `number` | Altura proporcional da face. |
+| `left` | `number` | Posição horizontal proporcional da face. |
+| `top` | `number` | Posição vertical proporcional da face. |
+
+## Ambiente de teste
+
+Para executar uma chamada sem consumo de saldo, envie o header:
+
+```http
+x-ambient: sandbox
+```
+
+Em chamadas de teste, `test` retorna `true` e `charged` retorna `0`.
+
+## Respostas esperadas
+
+As respostas possíveis estão exemplificadas no painel lateral da página.
+
+| Status | Quando ocorre |
+| --- | --- |
+| `200` | Validação facial concluída com sucesso. |
+| `400` | Imagem inválida, face não detectada ou `threshold` fora do intervalo permitido. |
+| `401` | A chave da API está ausente, inválida ou não pôde ser autenticada. |
+| `403` | A credencial não possui escopo de validação, o plano não permite acesso ou há bloqueio financeiro. |
+| `422` | Validação do corpo da requisição falhou no schema da API reference. |
+| `502` | Falha ao consultar o provedor da validação. |
+
+## Regras importantes
+
+- A credencial usada precisa possuir o escopo de validação.
+- O plano da conta precisa permitir API e validações.
+- Chamadas reais debitam o valor da validação conforme o preço vigente da conta.
+- Falhas de provedor ou face não detectada podem gerar estorno automático quando houver débito reservado.
+- O campo `matched` depende do `threshold` informado; aumentar o limite torna a aprovação mais rígida.
+- A comparação facial não executa validação documental; ela apenas compara as faces das imagens enviadas.

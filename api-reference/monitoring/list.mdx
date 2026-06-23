@@ -1,0 +1,80 @@
+---
+title: "Listar monitoramentos"
+description: "Liste monitoramentos ativos da conta autenticada."
+sidebarTitle: "Listar"
+api: "GET /v1/monitoring"
+playground: "interactive"
+keywords: ["listar monitoramentos", "monitoramento", "lazy data"]
+---
+
+Retorna os monitoramentos ativos da conta autenticada, com paginação por `offset` e `limit`.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Monitoramentos retornados com sucesso.",
+  "result": [
+    {
+      "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+      "name": "Processo cliente exemplo",
+      "type": "process",
+      "status": "active",
+      "status_label": "Ativo",
+      "notification_email": "alertas@example.com",
+      "price_per_check": 0.03,
+      "events_count": 1,
+      "checks_count": 1,
+      "charged_total": 0.03,
+      "target": {
+        "type": "process",
+        "label": "Processo",
+        "process_number": "0000001-77.2026.8.26.0000",
+        "court_code": "tjsp",
+        "court_acronym": "TJSP"
+      },
+      "frequency": "Diário"
+    }
+  ],
+  "total": 1,
+  "offset": 0,
+  "limit": 10
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+</ResponseExample>
+
+## Parâmetros
+
+<ParamField query="offset" default="0" type="integer">
+  Posição inicial da paginação.
+</ParamField>
+
+<ParamField query="limit" default="10" type="integer">
+  Quantidade máxima de itens retornados. O limite máximo é `100`.
+</ParamField>
+
+## Estrutura de `result[]`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | ID do monitoramento. |
+| `name` | `string` | Nome do monitoramento. |
+| `type` | `string` | Tipo: `process`, `pf` ou `pj`. |
+| `status` | `string` | Status técnico do monitoramento. |
+| `status_label` | `string` | Status em formato amigável. |
+| `notification_email` | `string` | E-mail configurado para alertas. |
+| `price_per_check` | `number` | Preço por checagem. |
+| `events_count` | `integer` | Total de eventos registrados. |
+| `checks_count` | `integer` | Total de checagens executadas. |
+| `charged_total` | `number` | Valor total cobrado até o momento. |
+| `target` | `object` | Alvo monitorado. |
+| `frequency` | `string` | Frequência principal exibida. |

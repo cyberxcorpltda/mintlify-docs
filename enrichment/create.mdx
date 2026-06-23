@@ -1,0 +1,259 @@
+---
+title: "Criar enriquecimento"
+keywords: ["criar enriquecimento", "enviar base", "enriquecimento cpf", "enriquecimento cnpj", "lazy data"]
+description: "Entenda o fluxo para criar, enviar, configurar e executar enriquecimentos de bases PF ou PJ."
+sidebarTitle: "Criar enriquecimento"
+---
+
+A criação de um **enriquecimento** é feita em etapas para reduzir erros de configuração e garantir que a base enviada esteja pronta para processamento.
+
+O fluxo começa com a escolha do tipo da base, passa pelo upload e análise do arquivo, seleção dos datasets e finaliza com o processamento em segundo plano.
+
+<Card title="Criar enriquecimento pela API" icon="plus" horizontal href="/api-reference/enrichment/create">
+  Crie o registro inicial e gere a assinatura temporária para upload do arquivo.
+</Card>
+
+## Fluxo completo
+
+<Steps>
+  <Step title="Crie o enriquecimento">
+    Informe tipo da base (`pf` ou `pj`), nome do enriquecimento e metadados do arquivo.
+  </Step>
+  <Step title="Envie o arquivo">
+    Use `upload_url` e `signature` para enviar o arquivo em `https://upload.lazydata.com.br/enrichment`.
+  </Step>
+  <Step title="Aguarde a análise">
+    A plataforma identifica colunas, amostras, quantidade de linhas e possível coluna de CPF ou CNPJ.
+  </Step>
+  <Step title="Selecione datasets">
+    Liste datasets disponíveis para o tipo da base e escolha os IDs que serão usados no processamento.
+  </Step>
+  <Step title="Configure e execute">
+    Envie a coluna do documento, datasets e campos adicionais para colocar o enriquecimento na fila.
+  </Step>
+  <Step title="Acompanhe e baixe saídas">
+    Consulte progresso, custos, status final e gere links temporários para os arquivos de saída.
+  </Step>
+</Steps>
+
+## Etapa 1: Tipo de enriquecimento
+
+Escolha o tipo da base antes de enviar o arquivo.
+
+| Tipo | Quando usar |
+| --- | --- |
+| `pf` | Arquivo com CPFs. |
+| `pj` | Arquivo com CNPJs. |
+
+Essa escolha define como a Lazy Data valida os documentos e quais datasets ficam disponíveis na etapa de configuração.
+
+## Etapa 2: Nome e arquivo
+
+Informe um nome para identificar o enriquecimento e os metadados do arquivo.
+
+```json
+{
+  "type": "pf",
+  "name": "Base de clientes",
+  "file": {
+    "name": "base-clientes.csv",
+    "extension": "csv"
+  }
+}
+```
+
+Formatos aceitos:
+
+- `csv`
+- `xls`
+- `xlsx`
+
+O arquivo precisa conter ao menos uma coluna com CPF ou CNPJ, conforme o tipo escolhido.
+
+## Etapa 3: Assinatura e upload
+
+A criação retorna `upload_url`, `signature` e `signature_expires_at`.
+
+O arquivo não é enviado para a URL base da API principal. O envio é feito no serviço de upload:
+
+```text
+https://upload.lazydata.com.br/enrichment
+```
+
+```bash
+curl --request POST \
+  --url "https://upload.lazydata.com.br/enrichment" \
+  --header "X-LazyData-Upload-Signature: <assinatura_de_upload>" \
+  --form "file=@./base-clientes.csv"
+```
+
+<Warning>
+  A assinatura é temporária. Se expirar antes do envio, gere uma nova assinatura usando o mesmo `enrichment_id`.
+</Warning>
+
+## Etapa 4: Análise do arquivo
+
+Após o upload, o arquivo passa por validação e análise.
+
+A análise identifica:
+
+- formato e tipo do arquivo;
+- tamanho;
+- quantidade de linhas;
+- presença de cabeçalho;
+- delimitador, quando aplicável;
+- colunas disponíveis;
+- possível coluna de CPF ou CNPJ;
+- amostras das primeiras linhas.
+
+Consulte o status até o enriquecimento chegar em `waiting_configuration`.
+
+```json
+{
+  "status": "waiting_configuration",
+  "analysis": {
+    "document_column": 0,
+    "document_column_name": "cpf",
+    "columns": [
+      {
+        "index": 0,
+        "name": "cpf",
+        "sample": "00000000000"
+      }
+    ]
+  }
+}
+```
+
+## Etapa 5: Revisão da coluna do documento
+
+Revise a coluna identificada como CPF ou CNPJ antes de iniciar o processamento.
+
+Se a coluna detectada automaticamente não for a correta, envie manualmente o índice correto em `document_column`.
+
+Quando o arquivo não possui cabeçalho, as colunas podem aparecer com nomes genéricos. Use `analysis.columns[]` e amostras para escolher a coluna certa.
+
+## Etapa 6: Seleção dos datasets
+
+Liste os datasets habilitados para enriquecimento usando o tipo da base.
+
+<Card title="Datasets disponíveis" icon="database" horizontal href="/api-reference/enrichment/datasets">
+  Liste datasets PF ou PJ disponíveis para processamento em massa.
+</Card>
+
+Nenhum dataset deve ser assumido como padrão. Escolha explicitamente os IDs retornados nessa rota.
+
+A estimativa de custo considera:
+
+- quantidade de linhas válidas;
+- datasets selecionados;
+- preço de cada dataset;
+- descontos aplicáveis ao plano;
+- regras de estorno, como `debit_only_if_found`.
+
+## Etapa 7: Configurar e executar
+
+Quando o enriquecimento estiver em `waiting_configuration`, envie a coluna do documento e os datasets escolhidos.
+
+```json
+{
+  "document_column": 0,
+  "datasets": ["person_basic_data"],
+  "additional": {}
+}
+```
+
+Ao iniciar, a API reserva o valor estimado quando aplicável e coloca o processamento em fila.
+
+<Card title="Configurar e executar" icon="play" horizontal href="/api-reference/enrichment/start">
+  Envie coluna, datasets e campos adicionais para iniciar o processamento.
+</Card>
+
+## Etapa 8: Acompanhamento
+
+Durante a execução, o status retorna progresso e métricas.
+
+| Campo | Descrição |
+| --- | --- |
+| `total_rows` | Total de linhas identificadas. |
+| `processed_rows` | Registros processados. |
+| `enriched_documents` | Documentos enriquecidos com sucesso. |
+| `invalid_documents` | Documentos inválidos. |
+| `not_found_documents` | Documentos sem retorno encontrado. |
+| `failed_rows` | Registros que falharam. |
+| `cost.consumed` | Valor consumido até o momento. |
+| `cost.refunded` | Valor estornado, quando houver. |
+
+<Card title="Consultar status" icon="clock" horizontal href="/api-reference/enrichment/status">
+  Acompanhe análise, progresso, custo e arquivos de saída.
+</Card>
+
+## Status do enriquecimento
+
+| Status | Descrição |
+| --- | --- |
+| `waiting_upload` | Enriquecimento criado e aguardando envio do arquivo. |
+| `receiving_upload` | Arquivo sendo recebido pelo serviço de upload. |
+| `validating_file` | Arquivo recebido e validação inicial em andamento. |
+| `analyzing_file` | Arquivo em análise para identificação de colunas e amostras. |
+| `uploading_storage` | Arquivo validado sendo salvo no storage. |
+| `waiting_configuration` | Arquivo pronto para configuração. |
+| `reserving_balance` | Valor estimado sendo reservado antes da execução. |
+| `queued` | Enriquecimento aguardando processamento. |
+| `processing` | Enriquecimento em execução. |
+| `uploading_outputs` | Arquivos finais sendo enviados para storage. |
+| `completed` | Enriquecimento concluído. |
+| `completed_with_errors` | Enriquecimento concluído com falhas parciais. |
+| `failed` | Enriquecimento falhou. |
+
+## Arquivos de saída
+
+Após conclusão, o enriquecimento pode gerar até quatro saídas.
+
+| Tipo | Arquivo | Descrição |
+| --- | --- | --- |
+| `success` | `registros_enriquecidos.csv` | Registros enriquecidos com sucesso. |
+| `not_found` | `nao_encontrados.csv` | Registros sem retorno nos datasets selecionados. |
+| `failed` | `falhas.csv` | Registros com falha de processamento. |
+| `invalid` | `documentos_invalidos.csv` | Registros ignorados por documento inválido. |
+
+Arquivos sem registros não são gerados. Consulte `outputs` para saber quais downloads estão disponíveis.
+
+<Card title="Arquivos de saída" icon="download" horizontal href="/api-reference/enrichment/outputs">
+  Gere links temporários para baixar os arquivos finais.
+</Card>
+
+## Continuação de enriquecimentos
+
+Se o usuário sair da tela antes de concluir o fluxo, o enriquecimento permanece salvo.
+
+Ao abrir novamente o item, use `status` e `resume_step` para retomar a etapa correta, como upload, revisão da análise, configuração ou progresso.
+
+## Regras importantes
+
+- O arquivo deve conter documentos válidos para o tipo escolhido.
+- CPFs e CNPJs inválidos são contabilizados como registros inválidos.
+- Registros válidos sem retorno nos datasets selecionados podem ser classificados como não encontrados.
+- Datasets com falha podem gerar estorno conforme a regra de cobrança aplicável.
+- Datasets disponíveis para consulta individual podem não estar habilitados para enriquecimento.
+- O processamento ocorre em segundo plano e pode ser acompanhado depois pela listagem ou status.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Criar enriquecimento" icon="plus" href="/api-reference/enrichment/create">
+    Gere o registro inicial e a assinatura de upload.
+  </Card>
+
+  <Card title="Upload para enriquecimento" icon="cloud-arrow-up" href="/api-reference/upload/enrichment">
+    Envie o arquivo para `upload.lazydata.com.br`.
+  </Card>
+
+  <Card title="Datasets disponíveis" icon="database" href="/api-reference/enrichment/datasets">
+    Escolha os datasets PF/PJ habilitados.
+  </Card>
+
+  <Card title="Consultar status" icon="clock" href="/api-reference/enrichment/status">
+    Acompanhe progresso, custo e saídas.
+  </Card>
+</Columns>

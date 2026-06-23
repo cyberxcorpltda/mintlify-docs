@@ -1,0 +1,98 @@
+---
+title: "Criar pasta"
+keywords: ["criar pasta", "storage folder", "armazenamento", "lazy data"]
+description: "Crie uma pasta na raiz ou dentro de outra pasta do armazenamento."
+sidebarTitle: "Criar pasta"
+api: "POST /v1/storage/folders"
+playground: "interactive"
+---
+
+Cria uma pasta no armazenamento da conta.
+
+Use `parent_id` para criar dentro de outra pasta. Omitir ou enviar `null` cria a pasta na raiz.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Pasta criada.",
+  "result": {
+    "id": "54d8a266-4e21-4a9a-9c15-b4b93bc11c6e",
+    "type": "folder",
+    "name": "Contratos",
+    "parent_id": null,
+    "created_at": "2026-06-22T11:55:00+00:00",
+    "updated_at": "2026-06-22T11:55:00+00:00"
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Nome da pasta inválido."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "Seu plano atual não possui armazenamento habilitado."
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Pasta não localizada."
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "Já existe uma pasta com este nome."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="name" type="string" required placeholder="Contratos">
+  Nome da pasta.
+</ParamField>
+
+<ParamField body="parent_id" type="string">
+  ID da pasta pai. Use `null` para criar na raiz.
+</ParamField>
+
+## Exemplo de corpo
+
+```json
+{
+  "name": "Contratos",
+  "parent_id": null
+}
+```
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta da API.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da resposta.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Metadados da pasta criada.
+</ResponseField>
+
+## Regras importantes
+
+- O plano da conta precisa ter armazenamento habilitado.
+- Não é permitido criar duas pastas com o mesmo nome dentro da mesma pasta pai.
+- O nome é normalizado, removendo espaços duplicados e caracteres de caminho.

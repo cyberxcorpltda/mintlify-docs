@@ -1,0 +1,135 @@
+---
+title: "Comparação facial"
+keywords: ["comparação facial", "validação facial", "similaridade facial", "biometria facial", "antifraude", "lazy data"]
+description: "Compare duas imagens faciais e receba similaridade, confiança e compatibilidade para apoiar validações de identidade."
+sidebarTitle: "Comparação facial"
+---
+
+A **comparação facial** permite comparar duas imagens e identificar se elas provavelmente representam a mesma pessoa.
+
+Use esta funcionalidade em fluxos de onboarding, validação cadastral, revisão manual, prevenção à fraude e confirmação de identidade quando você já possui uma imagem de referência e precisa compará-la com uma imagem enviada pelo usuário.
+
+<Card title="Endpoint da API" icon="face-viewfinder" horizontal href="/api-reference/validation/facial-compare">
+  Veja parâmetros, exemplos de resposta e regras técnicas da rota de comparação facial.
+</Card>
+
+## Como funciona
+
+A validação recebe duas imagens:
+
+- `source_image`: imagem base usada como referência.
+- `target_image`: imagem que será comparada com a imagem base.
+
+A API detecta faces nas duas imagens, calcula a similaridade e retorna se a comparação atingiu o limite mínimo definido em `threshold`.
+
+```json
+{
+  "source_image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ...",
+  "target_image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ...",
+  "threshold": 80
+}
+```
+
+## Quando usar
+
+| Caso | Uso recomendado |
+| --- | --- |
+| Onboarding digital | Comparar selfie enviada pelo usuário com imagem de referência. |
+| Revisão antifraude | Medir compatibilidade facial antes de aprovação manual. |
+| Reautenticação sensível | Confirmar identidade antes de liberar uma ação crítica. |
+| Cadastro assistido | Apoiar operadores com score e evidências visuais estruturadas. |
+
+<Warning>
+  A comparação facial mede similaridade entre imagens. Ela não substitui validação documental, prova de vida, análise humana ou regras internas quando o fluxo exigir maior rigor.
+</Warning>
+
+## Resultado principal
+
+O retorno principal fica em `result.comparison`.
+
+```json
+{
+  "matched": true,
+  "similarity": 97.42,
+  "confidence": 99.12,
+  "threshold": 80,
+  "unmatched_faces": 0
+}
+```
+
+| Campo | Como interpretar |
+| --- | --- |
+| `matched` | `true` quando `similarity` é maior ou igual ao `threshold`. |
+| `similarity` | Percentual de similaridade entre as faces comparadas. |
+| `confidence` | Menor confiança entre as faces usadas na comparação. |
+| `threshold` | Limite mínimo aplicado na decisão. |
+| `unmatched_faces` | Quantidade de faces detectadas que não foram compatíveis. |
+
+## Limite de similaridade
+
+O `threshold` define o rigor da decisão automática.
+
+| Threshold | Interpretação prática |
+| --- | --- |
+| `70` a `79` | Mais permissivo; útil para triagem, mas exige controles adicionais. |
+| `80` | Padrão recomendado para fluxos gerais. |
+| `90` ou mais | Mais rígido; recomendado para ações sensíveis, com risco maior de revisão manual. |
+
+<Note>
+  O valor ideal depende da sua política de risco. Use `matched`, `similarity`, `confidence` e suas regras internas em conjunto.
+</Note>
+
+## Requisitos das imagens
+
+| Requisito | Descrição |
+| --- | --- |
+| Formatos | JPG, PNG ou WebP. |
+| Envio | Base64 puro ou Data URL com prefixo MIME. |
+| Tamanho | Até `10 MB` por imagem. |
+| Face | Cada imagem deve conter uma face detectável. |
+| Qualidade | Prefira imagem nítida, frontal, bem iluminada e sem cortes relevantes no rosto. |
+
+Imagens escuras, desfocadas, com múltiplas faces, óculos muito reflexivos, rosto cortado ou ângulo extremo podem reduzir a confiança ou impedir a detecção.
+
+## Cobrança e sandbox
+
+Chamadas reais debitam o valor da validação conforme o preço vigente da conta.
+
+Para testar a integração sem consumo de saldo, envie:
+
+```http
+x-ambient: sandbox
+```
+
+<Card title="Ambiente de teste" icon="flask" horizontal href="/quickstart/sandbox">
+  Veja como usar o sandbox para validar payloads e respostas antes de chamadas reais.
+</Card>
+
+## Erros comuns
+
+| Situação | Como tratar |
+| --- | --- |
+| Imagem inválida | Verifique Base64, formato, tamanho e prefixo MIME. |
+| Face não detectada | Peça nova imagem com rosto visível, boa luz e sem cortes. |
+| Baixa similaridade | Encaminhe para revisão manual ou aplique regra de reprovação conforme sua política. |
+| Falha de provedor | Implemente retry com intervalo progressivo para falhas temporárias. |
+
+## Boas práticas
+
+- Não armazene imagens faciais em logs.
+- Use `threshold` mais alto para ações de maior risco.
+- Combine comparação facial com validação cadastral quando precisar de decisão mais robusta.
+- Trate `matched: false` como sinal de risco, não como explicação completa da divergência.
+- Mostre ao operador `similarity`, `confidence` e as imagens originais apenas quando necessário e permitido pela sua política.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Comparação facial" icon="face-viewfinder" href="/api-reference/validation/facial-compare">
+    Consulte a documentação completa do endpoint.
+  </Card>
+
+  <Card title="Validação cadastral" icon="shield-check" href="/api-reference/validation/registration">
+    Compare dados informados com dados disponíveis na base.
+  </Card>
+</Columns>

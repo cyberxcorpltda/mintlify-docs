@@ -1,0 +1,318 @@
+---
+title: "Histórico de consultas"
+description: "Entenda como acompanhar, revisar e consultar resultados anteriores de consultas."
+sidebarTitle: "Histórico"
+keywords: ["histórico de consultas", "resultado assíncrono", "consulta anterior", "history id", "lazy data"]
+---
+
+O **histórico de consultas** permite revisar consultas já executadas, acompanhar consultas assíncronas em andamento e acessar resultados anteriores sem iniciar uma nova consulta.
+
+Ele é usado principalmente em dois cenários:
+
+- acompanhar o resultado de uma consulta assíncrona pela API;
+- revisar consultas anteriores pelo painel, conforme plano e permissões da conta.
+
+<Card title="Resultado assíncrono" icon="clock" horizontal href="/api-reference/search/async-result">
+  Consulte o andamento e o resultado final de uma consulta iniciada em modo assíncrono.
+</Card>
+
+## Quando usar
+
+Use o histórico quando sua operação precisa:
+
+- consultar o resultado final de uma chamada assíncrona;
+- verificar se uma consulta ainda está em fila ou processamento;
+- revisar datasets executados e falhas parciais;
+- conferir custos, estornos e tempo de execução;
+- abrir uma consulta anterior no painel sem executar uma nova cobrança.
+
+<Warning>
+  Consultar o histórico não executa novamente os datasets. Para buscar dados atualizados, faça uma nova consulta.
+</Warning>
+
+## Como o histórico é criado
+
+Consultas por datasets geram um registro de histórico técnico.
+
+Esse registro contém:
+
+- identificador da consulta;
+- tipo consultado;
+- documento ou identificador usado;
+- datasets solicitados;
+- status geral da consulta;
+- status individual por dataset;
+- custo, estornos e tempo de execução;
+- resultado retornado por dataset, quando disponível;
+- erros por dataset, quando houver.
+
+## Resultado assíncrono pela API
+
+Quando uma consulta é iniciada em modo `async`, a resposta inicial retorna um `id`.
+
+Exemplo:
+
+```json
+{
+  "code": 202,
+  "message": "Consulta iniciada com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "queued",
+    "datasets": ["person_basic_data"]
+  }
+}
+```
+
+Use esse `id` como `history_id` para consultar o resultado:
+
+```http
+GET /v1/search/{target}/{history_id}
+```
+
+Valores comuns para `target`:
+
+| `target` | Consulta |
+| --- | --- |
+| `person` | Pessoa física. |
+| `company` | Pessoa jurídica. |
+| `process` | Processos vinculados a CPF ou CNPJ. |
+| `vehicle` | Veículos por placa. |
+
+## Polling recomendado
+
+<Steps>
+  <Step title="Inicie a consulta">
+    Execute a consulta em modo `async` e guarde o `id` retornado.
+  </Step>
+  <Step title="Consulte o histórico">
+    Chame o endpoint de resultado assíncrono usando `target` e `history_id`.
+  </Step>
+  <Step title="Aguarde status final">
+    Enquanto o status for `queued` ou `processing`, repita a consulta com intervalo progressivo.
+  </Step>
+  <Step title="Leia o resultado">
+    Quando o status final chegar, trate `result`, `datasets_status`, `errors`, `cost` e `timing`.
+  </Step>
+</Steps>
+
+<Note>
+  Evite polling agressivo. Para consultas com múltiplos datasets ou fontes online, use intervalos progressivos para reduzir carga desnecessária.
+</Note>
+
+## Status do histórico
+
+| Status | Descrição |
+| --- | --- |
+| `queued` | Consulta criada e aguardando processamento. |
+| `processing` | Consulta em processamento. |
+| `completed` | Consulta concluída. |
+| `completed_with_errors` | Consulta concluída com falhas parciais em um ou mais datasets. |
+| `failed` | Consulta falhou e não possui resultado útil. |
+
+Na API pública, o campo `status_values` pode listar apenas os status principais do polling. Ainda assim, trate `completed_with_errors` como status final quando ele aparecer no histórico.
+
+## Estrutura do resultado
+
+O retorno do histórico segue o padrão da API:
+
+```json
+{
+  "code": 200,
+  "message": "Histórico da consulta retornado com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "completed",
+    "target": "person",
+    "query": {
+      "taxid": "00000000000",
+      "datasets": ["person_basic_data"],
+      "additional": {}
+    },
+    "cost": {
+      "total": 0.05,
+      "refunded": 0,
+      "datasets": {
+        "person_basic_data": {
+          "charged": 0.05,
+          "refunded": 0
+        }
+      }
+    },
+    "timing": {
+      "total": 0.42,
+      "datasets": {
+        "person_basic_data": 0.42
+      }
+    },
+    "datasets_status": {
+      "person_basic_data": "completed"
+    },
+    "errors": {},
+    "result": {
+      "person_basic_data": {
+        "tax_id": "00000000000",
+        "name": "PESSOA EXEMPLO"
+      }
+    }
+  }
+}
+```
+
+## Campos principais
+
+| Campo | Descrição |
+| --- | --- |
+| `id` | Identificador do histórico da consulta. |
+| `status` | Status geral da consulta. |
+| `target` | Tipo da consulta. |
+| `query` | Documento, datasets e campos adicionais usados na chamada. |
+| `cost` | Valores cobrados e estornados. |
+| `timing` | Tempo total e tempo individual por dataset. |
+| `datasets_status` | Status individual de cada dataset solicitado. |
+| `errors` | Erros retornados por dataset ou falhas globais. |
+| `result` | Resultado agrupado por dataset. |
+| `created_at` | Data de criação do histórico. |
+| `last_updated_at` | Data da última atualização do histórico. |
+
+## Status por dataset
+
+O campo `datasets_status` mostra o andamento individual de cada dataset.
+
+```json
+{
+  "datasets_status": {
+    "person_basic_data": "completed",
+    "person_example_dataset": "failed"
+  }
+}
+```
+
+Esse campo é útil para identificar resultados parciais.
+
+Quando um dataset falha, consulte `errors` para entender o motivo:
+
+```json
+{
+  "errors": {
+    "person_example_dataset": {
+      "code": 42025,
+      "message": "Não foi possível consultar o provedor da consulta."
+    }
+  }
+}
+```
+
+## Custos e estornos
+
+O histórico pode mostrar quanto foi cobrado e quanto foi estornado.
+
+Estornos podem ocorrer quando:
+
+- um dataset falha antes de concluir;
+- a regra comercial prevê cobrança apenas se houver retorno útil;
+- uma falha financeira impede a confirmação final de parte da consulta.
+
+```json
+{
+  "cost": {
+    "total": 0.15,
+    "refunded": 0.05,
+    "datasets": {
+      "person_basic_data": {
+        "charged": 0.05,
+        "refunded": 0
+      },
+      "person_example_dataset": {
+        "charged": 0.05,
+        "refunded": 0.05
+      }
+    }
+  }
+}
+```
+
+## Histórico no painel
+
+No painel, a área de histórico permite listar consultas anteriores com filtros.
+
+Filtros disponíveis:
+
+| Filtro | Descrição |
+| --- | --- |
+| `target` | Tipo da consulta: `pf`, `pj`, `process`, `vehicle` ou `all`. |
+| `status` | Status: `queued`, `processing`, `completed`, `completed_with_errors`, `failed` ou `all`. |
+| `document` | CPF, CNPJ, placa ou ID do histórico. |
+| `date_from` | Data inicial da busca. |
+| `date_to` | Data final da busca. |
+| `offset` | Posição inicial para paginação. |
+| `limit` | Quantidade de itens por página. |
+
+O detalhe do histórico no painel exige permissão do plano e, quando a chamada for feita por subconta, acesso ao recurso `history`.
+
+<Info>
+  As rotas `/panel/history` são internas do painel. Para integrações externas, use o endpoint público de resultado assíncrono com `history_id`.
+</Info>
+
+## Listagem no painel
+
+A listagem do painel retorna um resumo de cada consulta.
+
+Campos comuns:
+
+| Campo | Descrição |
+| --- | --- |
+| `id` | ID do histórico. |
+| `target` | Tipo da consulta. |
+| `status` | Status geral. |
+| `identifier` | CPF, CNPJ, placa ou ID usado como identificador. |
+| `datasets_count` | Total de datasets solicitados. |
+| `datasets_completed` | Quantidade de datasets concluídos. |
+| `datasets_failed` | Quantidade de datasets com falha. |
+| `datasets_processing` | Quantidade de datasets ainda em processamento. |
+| `result_count` | Quantidade aproximada de blocos de resultado. |
+| `charged` | Valor cobrado. |
+| `refunded` | Valor estornado. |
+| `elapsed` | Tempo total em segundos. |
+| `created_at` | Data de criação. |
+| `last_updated_at` | Última atualização. |
+
+## Janela de leitura
+
+Resultados assíncronos ficam disponíveis por uma janela limitada.
+
+Depois do prazo de retenção técnica, a API pode retornar `404` para o `history_id`.
+
+No painel, a disponibilidade do histórico também depende do plano, da política de retenção e das permissões da conta.
+
+## Segurança
+
+Históricos podem conter documentos e dados sensíveis.
+
+Boas práticas:
+
+- guarde apenas o `history_id` necessário para acompanhar a consulta;
+- não salve resultados completos em logs públicos;
+- trate erros por dataset separadamente de falhas gerais;
+- não exponha `history_id` em páginas públicas sem autenticação;
+- use o painel para auditoria operacional e o endpoint assíncrono para integrações.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Resultado assíncrono" icon="clock" href="/api-reference/search/async-result">
+    Consulte status, custos, erros e resultados por `history_id`.
+  </Card>
+
+  <Card title="Visão geral de consultas" icon="magnifying-glass" href="/search/overview">
+    Entenda tipos de consulta, datasets, cobrança e retorno.
+  </Card>
+
+  <Card title="Datasets e preços" icon="database" href="/api-reference/search/datasets">
+    Liste datasets disponíveis e campos adicionais.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/search">
+    Consulte erros de histórico, provedor, saldo e permissão.
+  </Card>
+</Columns>

@@ -1,0 +1,276 @@
+---
+title: "Execução e acompanhamento"
+keywords: ["execução enriquecimento", "progresso enriquecimento", "status enriquecimento", "cobrança enriquecimento", "lazy data"]
+description: "Entenda como acompanhar processamento, status, cobrança e arquivos gerados no enriquecimento."
+sidebarTitle: "Execução e acompanhamento"
+---
+
+Após configurar a coluna do documento e selecionar os datasets, o enriquecimento é colocado em fila para processamento em segundo plano.
+
+Durante a execução, a Lazy Data atualiza status, progresso, registros processados, falhas, consumo, estornos e arquivos finais disponíveis para download.
+
+<Card title="Consultar status pela API" icon="clock" horizontal href="/api-reference/enrichment/status">
+  Acompanhe análise, fila, processamento, cobrança e saídas de um enriquecimento.
+</Card>
+
+## Antes de iniciar
+
+O processamento só pode começar depois que o arquivo for enviado e analisado.
+
+O status esperado antes da execução é:
+
+```text
+waiting_configuration
+```
+
+Nessa etapa, revise:
+
+- coluna de CPF ou CNPJ detectada em `analysis.document_column`;
+- datasets selecionados;
+- campos adicionais exigidos por dataset;
+- estimativa de custo antes de confirmar.
+
+<Warning>
+  Se a coluna do documento estiver incorreta, registros válidos podem ser tratados como inválidos. Revise a amostra de `analysis.columns[]` antes de iniciar.
+</Warning>
+
+## Início do processamento
+
+Para iniciar, envie a coluna do documento e os datasets escolhidos.
+
+```json
+{
+  "document_column": 0,
+  "datasets": ["person_basic_data"],
+  "additional": {}
+}
+```
+
+Ao confirmar, a API reserva o valor estimado quando aplicável e coloca o enriquecimento em fila.
+
+<Card title="Configurar e executar" icon="play" horizontal href="/api-reference/enrichment/start">
+  Envie `document_column`, `datasets` e `additional` para iniciar o processamento.
+</Card>
+
+## Processamento em segundo plano
+
+O enriquecimento não depende da tela permanecer aberta.
+
+Depois de iniciado, o processamento continua em segundo plano e pode ser acompanhado pela listagem, pelo detalhe ou pelo status do enriquecimento.
+
+Caso o usuário saia da tela, use `status` e `resume_step` para retomar a experiência correta no painel.
+
+## Fila e lotes
+
+Enriquecimentos são processados em fila para evitar sobrecarga e manter previsibilidade operacional.
+
+Durante a execução:
+
+- o arquivo é dividido em registros processáveis;
+- documentos inválidos são contabilizados separadamente;
+- cada registro válido passa pelos datasets selecionados;
+- falhas parciais são registradas sem necessariamente interromper toda a base;
+- os arquivos finais são gerados ao término do processamento.
+
+## Progresso
+
+O progresso fica no objeto `progress`.
+
+```json
+{
+  "progress": {
+    "stage": "processing",
+    "stage_label": "Processando registros",
+    "percent": 42,
+    "total_rows": 120,
+    "processed_rows": 50,
+    "enriched_documents": 39,
+    "invalid_documents": 3,
+    "not_found_documents": 6,
+    "failed_rows": 2
+  }
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `stage` | Etapa técnica atual do enriquecimento. |
+| `stage_label` | Descrição amigável da etapa atual. |
+| `percent` | Percentual aproximado de progresso. |
+| `uploaded_bytes` | Bytes recebidos durante upload, quando aplicável. |
+| `total_bytes` | Tamanho total do arquivo recebido, quando aplicável. |
+| `total_rows` | Total de registros identificados para processamento. |
+| `processed_rows` | Registros já processados. |
+| `enriched_documents` | Registros enriquecidos com sucesso. |
+| `invalid_documents` | Registros com CPF ou CNPJ inválido. |
+| `not_found_documents` | Registros válidos sem retorno útil nos datasets selecionados. |
+| `failed_rows` | Registros que falharam por erro técnico ou falha de consulta. |
+
+## Status do enriquecimento
+
+| Status | Descrição |
+| --- | --- |
+| `waiting_upload` | Enriquecimento criado e aguardando envio do arquivo. |
+| `receiving_upload` | Arquivo sendo recebido pelo serviço de upload. |
+| `validating_file` | Arquivo recebido e validação inicial em andamento. |
+| `analyzing_file` | Arquivo em análise para identificar colunas, cabeçalho e amostras. |
+| `uploading_storage` | Arquivo validado sendo salvo no storage. |
+| `waiting_configuration` | Arquivo pronto para seleção de coluna e datasets. |
+| `reserving_balance` | Valor estimado sendo reservado antes da execução. |
+| `queued` | Enriquecimento aguardando processamento. |
+| `processing` | Enriquecimento em execução. |
+| `uploading_outputs` | Arquivos finais sendo enviados para storage. |
+| `completed` | Enriquecimento concluído. |
+| `completed_with_errors` | Enriquecimento concluído com falhas parciais. |
+| `failed` | Enriquecimento falhou. |
+
+## Cobrança
+
+Antes de iniciar, a plataforma calcula uma estimativa com base em:
+
+- quantidade de registros válidos;
+- datasets selecionados;
+- preço de cada dataset;
+- regras comerciais e descontos aplicáveis;
+- cobrança condicionada ao retorno, quando existir.
+
+Durante a execução, o objeto `cost` informa reserva, consumo e estornos.
+
+```json
+{
+  "cost": {
+    "estimated": 6,
+    "reserved": 6,
+    "consumed": 2.45,
+    "refunded": 0.35,
+    "datasets": {
+      "person_basic_data": {
+        "id": "person_basic_data",
+        "name": "Dados básicos",
+        "price": 0.05,
+        "debit_only_if_found": false
+      }
+    }
+  }
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `estimated` | Valor estimado antes da execução. |
+| `reserved` | Valor reservado para processamento. |
+| `consumed` | Valor efetivamente consumido até o momento. |
+| `refunded` | Valor estornado, quando houver. |
+| `datasets` | Detalhe dos datasets usados no cálculo e processamento. |
+
+## Cobrança condicionada
+
+Alguns datasets podem ter `debit_only_if_found: true`.
+
+Nesses casos, registros sem retorno útil podem gerar estorno ou não consumir o valor final daquele dataset, conforme a regra comercial aplicada à conta.
+
+O valor final pode ser menor que a estimativa inicial quando:
+
+- existem documentos inválidos;
+- datasets com cobrança condicionada não retornam dados;
+- registros falham antes da consulta efetiva;
+- algum dataset gera estorno;
+- parte do processamento não é concluída.
+
+## Falhas parciais
+
+Uma falha em um registro ou dataset não interrompe necessariamente todo o enriquecimento.
+
+Quando possível, a Lazy Data continua processando os demais registros e contabiliza falhas em `failed_rows`.
+
+Ao final, o enriquecimento pode terminar como:
+
+| Status final | Interpretação |
+| --- | --- |
+| `completed` | Processamento concluído sem falhas relevantes. |
+| `completed_with_errors` | Processamento concluído, mas com falhas parciais ou registros não processados. |
+| `failed` | O enriquecimento não pôde ser concluído. |
+
+## Retomada
+
+O campo `resume_step` indica a etapa recomendada para continuar a experiência no painel.
+
+Exemplos comuns:
+
+| `resume_step` | Quando usar |
+| --- | --- |
+| `upload` | O arquivo ainda precisa ser enviado. |
+| `analysis` | O arquivo está em validação ou análise. |
+| `configuration` | O arquivo está pronto para configurar coluna e datasets. |
+| `progress` | O enriquecimento já foi iniciado e deve exibir acompanhamento. |
+| `outputs` | O enriquecimento terminou e possui saídas para download. |
+
+<Note>
+  Persistir o `id` do enriquecimento permite retomar o fluxo depois usando listagem, detalhe ou status.
+</Note>
+
+## Arquivos finais
+
+Ao final do processamento, a Lazy Data pode gerar arquivos separados por resultado.
+
+| Output | Arquivo | Quando aparece |
+| --- | --- | --- |
+| `success` | `registros_enriquecidos.csv` | Existem registros enriquecidos com sucesso. |
+| `not_found` | `nao_encontrados.csv` | Existem registros válidos sem retorno útil. |
+| `failed` | `falhas.csv` | Existem registros com erro técnico ou falha de consulta. |
+| `invalid` | `documentos_invalidos.csv` | Existem documentos inválidos para o tipo do enriquecimento. |
+
+Arquivos sem registros não são gerados.
+
+Consulte `outputs` para saber quais downloads estão disponíveis:
+
+```json
+{
+  "outputs": {
+    "success": {
+      "label": "Registros enriquecidos",
+      "rows": 120,
+      "available": true
+    },
+    "failed": {
+      "label": "Falhas",
+      "rows": 2,
+      "available": true
+    }
+  }
+}
+```
+
+<Card title="Arquivos de saída" icon="download" horizontal href="/api-reference/enrichment/outputs">
+  Gere links temporários para baixar os arquivos finais disponíveis.
+</Card>
+
+## Boas práticas
+
+- Revise a coluna de CPF ou CNPJ antes de iniciar.
+- Selecione apenas datasets necessários para o objetivo da base.
+- Confira a estimativa antes de confirmar o processamento.
+- Acompanhe `processed_rows`, `failed_rows` e `cost.consumed` em bases grandes.
+- Trate `completed_with_errors` como conclusão parcial e revise os arquivos de falha.
+- Consulte `outputs` antes de tentar gerar links de download.
+- Baixe os arquivos finais após a conclusão, conforme a política de retenção da sua operação.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Configurar e executar" icon="play" href="/api-reference/enrichment/start">
+    Inicie o processamento após análise do arquivo.
+  </Card>
+
+  <Card title="Consultar status" icon="clock" href="/api-reference/enrichment/status">
+    Acompanhe progresso, cobrança e saídas.
+  </Card>
+
+  <Card title="Arquivos de saída" icon="download" href="/api-reference/enrichment/outputs">
+    Gere links temporários para baixar resultados.
+  </Card>
+
+  <Card title="Arquivos de entrada e saída" icon="file-spreadsheet" href="/enrichment/files">
+    Veja formatos aceitos e estrutura dos arquivos gerados.
+  </Card>
+</Columns>

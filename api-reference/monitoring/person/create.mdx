@@ -1,0 +1,102 @@
+---
+title: "Criar monitoramento"
+keywords: ["criar monitoramento cpf", "pessoa física", "fontes", "alerta cpf"]
+description: "Crie um monitoramento de pessoa física para fontes selecionadas."
+sidebarTitle: "Criar"
+api: "POST /v1/monitoring/person"
+playground: "interactive"
+---
+
+Cria um monitoramento de pessoa física para um CPF e uma ou mais fontes.
+
+Cada fonte recebe sua própria frequência de checagem.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Monitoramento criado. A checagem inicial será executada em segundo plano.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "name": "PESSOA EXEMPLO DOS SANTOS",
+    "type": "pf",
+    "status": "active",
+    "status_label": "Ativo",
+    "notification_email": "alertas@example.com",
+    "price_per_check": 0.35,
+    "checks_count": 0,
+    "events_count": 0,
+    "charged_total": 0,
+    "target": {
+      "type": "pf",
+      "label": "Pessoa física",
+      "name": "PESSOA EXEMPLO DOS SANTOS",
+      "tax_id": "00000000000"
+    },
+    "sources_count": 1,
+    "initial_check_queued": true
+  }
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "Já existe um monitoramento para este CPF.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "active"
+  }
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="name" type="string" required>
+  Nome da pessoa ou nome interno do monitoramento.
+</ParamField>
+
+<ParamField body="tax_id" type="string" required>
+  CPF da pessoa, com ou sem pontuação.
+</ParamField>
+
+<ParamField body="sources" type="array<object>" required>
+  Fontes que serão monitoradas.
+</ParamField>
+
+<ParamField body="notification_email" type="string" required>
+  E-mail que receberá os alertas.
+</ParamField>
+
+## Estrutura de `sources[]`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `source_id` | `string` | ID da fonte retornada em [Configuração](/api-reference/monitoring/person/config). |
+| `frequency_id` | `string` | ID da frequência escolhida. |
+
+## Exemplo de corpo
+
+```json
+{
+  "name": "PESSOA EXEMPLO DOS SANTOS",
+  "tax_id": "00000000000",
+  "sources": [
+    {
+      "source_id": "person_processes",
+      "frequency_id": "daily"
+    }
+  ],
+  "notification_email": "alertas@example.com"
+}
+```
+
+## Fluxo recomendado
+
+1. Consulte [Configuração](/api-reference/monitoring/person/config).
+2. Valide o CPF em [Validar pessoa física](/api-reference/monitoring/person/validate).
+3. Crie o monitoramento com as fontes desejadas.
+4. Acompanhe a checagem inicial em [Detalhar monitoramento](/api-reference/monitoring/detail).

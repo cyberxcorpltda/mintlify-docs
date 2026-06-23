@@ -1,0 +1,315 @@
+---
+title: "Busca por CPF"
+description: "Execute consultas de pessoa física por CPF nos datasets selecionados."
+sidebarTitle: "Busca por CPF"
+api: "POST /v1/search/person"
+playground: "interactive"
+---
+
+Executa uma consulta de pessoa física por CPF usando os datasets informados no corpo da requisição.
+
+Essa consulta pode ser executada em modo síncrono ou assíncrono. No modo assíncrono, a API retorna um `id` para acompanhamento posterior do resultado.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Consulta realizada com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "completed",
+    "target": "person",
+    "query": {
+      "taxid": "00000000000",
+      "datasets": ["person_basic_data"],
+      "additional": {}
+    },
+    "cost": {
+      "total": 0.05,
+      "refunded": 0,
+      "datasets": {
+        "person_basic_data": {
+          "charged": 0.05,
+          "refunded": 0
+        }
+      }
+    },
+    "timing": {
+      "total": 0.42,
+      "datasets": {
+        "person_basic_data": 0.42
+      }
+    },
+    "errors": {},
+    "datasets_status": {
+      "person_basic_data": "completed"
+    },
+    "result": {
+      "person_basic_data": {
+        "name": "PESSOA FICTÍCIA",
+        "tax_id": "00000000000",
+        "birth_date": "1990-01-01"
+      }
+    },
+    "created_at": "2026-06-22T12:00:00Z",
+    "last_updated_at": "2026-06-22T12:00:01Z"
+  }
+}
+```
+
+```json 202
+{
+  "code": 202,
+  "message": "Consulta iniciada com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "queued",
+    "status_values": ["queued", "processing", "completed", "failed"],
+    "datasets": ["person_basic_data"]
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Um ou mais parâmetros informados são inválidos."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="taxid" type="string" required placeholder="00000000000">
+  CPF da pessoa consultada. Pontuação é aceita e removida automaticamente.
+</ParamField>
+
+<ParamField body="datasets" type="string[]" required>
+  Lista de IDs dos datasets que serão consultados.
+</ParamField>
+
+<ParamField body="additional" type="object">
+  Dados adicionais por dataset, quando algum dataset exigir parâmetros extras.
+</ParamField>
+
+<ParamField body="mode" default="async" type="string" placeholder="async">
+  Modo da consulta.
+</ParamField>
+
+Valores aceitos para `mode`:
+
+| Valor | Descrição |
+| --- | --- |
+| `async` | Inicia a consulta e retorna um `id` para acompanhar o resultado depois. |
+| `sync` | Aguarda a conclusão da consulta e retorna os dados diretamente na resposta. |
+
+<ParamField header="x-ambient" type="string" placeholder="sandbox">
+  Use `sandbox` para executar uma chamada de teste sem consumo de saldo.
+</ParamField>
+
+<Note>
+  Para detalhes sobre chamadas de teste, consulte [Ambiente de teste](/quickstart/sandbox).
+</Note>
+
+## Exemplo de corpo
+
+```json
+{
+  "taxid": "00000000000",
+  "mode": "async",
+  "datasets": ["person_basic_data"],
+  "additional": {}
+}
+```
+
+<Warning>
+  O CPF acima é fictício e serve apenas para demonstrar a estrutura da requisição. Em chamadas reais ou sandbox, informe um CPF válido para o ambiente utilizado.
+</Warning>
+
+## Parâmetros adicionais por dataset
+
+Alguns datasets podem exigir campos adicionais. Consulte `additional_fields` no endpoint de datasets e preços para saber quais campos devem ser enviados.
+
+Exemplo de envio de dados adicionais:
+
+```json
+{
+  "taxid": "00000000000",
+  "mode": "async",
+  "datasets": ["person_example_dataset"],
+  "additional": {
+    "person_example_dataset": {
+      "state": "SP"
+    }
+  }
+}
+```
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta da API.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da resposta.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Objeto principal da consulta. A estrutura varia de acordo com o modo de execução.
+</ResponseField>
+
+## Retorno síncrono
+
+Quando `mode` é `sync`, a resposta pode retornar `code: 200` com os dados completos da consulta.
+
+### Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador único da consulta. |
+| `status` | `string` | Status final da consulta. Normalmente `completed`. |
+| `target` | `string` | Tipo da consulta. Para esta rota, retorna `person`. |
+| `query` | `object` | Dados usados na consulta. |
+| `cost` | `object` | Valores cobrados e estornados. |
+| `timing` | `object` | Tempo total e tempo individual por dataset. |
+| `errors` | `object` | Erros por dataset, quando ocorrerem. |
+| `datasets_status` | `object` | Status individual de cada dataset. |
+| `result` | `object` | Resultado agrupado por dataset. |
+| `created_at` | `string` | Data de criação da consulta em ISO 8601. |
+| `last_updated_at` | `string` | Data da última atualização da consulta em ISO 8601. |
+
+### Estrutura de `result.query`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `taxid` | `string` | CPF consultado, normalizado apenas com números. |
+| `datasets` | `array<string>` | Datasets solicitados. |
+| `additional` | `object` | Dados adicionais enviados por dataset. |
+
+### Estrutura de `result.cost`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `total` | `number` | Valor total debitado após regras de retorno e estorno. |
+| `refunded` | `number` | Valor total estornado. |
+| `datasets` | `object` | Detalhamento de cobrança por dataset. |
+
+### Estrutura de `result.timing`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `total` | `number` | Tempo total da consulta em segundos. |
+| `datasets` | `object` | Tempo individual de cada dataset em segundos. |
+
+### Estrutura de `result.errors`
+
+O campo `errors` retorna um objeto indexado pelo ID do dataset quando alguma base falha.
+
+Exemplo:
+
+```json
+{
+  "errors": {
+    "person_example_dataset": {
+      "code": 42025,
+      "message": "Não foi possível consultar o provedor da consulta."
+    }
+  }
+}
+```
+
+### Estrutura de `result.datasets_status`
+
+Objeto com o status individual de cada dataset.
+
+Exemplo:
+
+```json
+{
+  "datasets_status": {
+    "person_basic_data": "completed",
+    "person_example_dataset": "failed"
+  }
+}
+```
+
+### Estrutura de `result.result`
+
+Objeto indexado pelo ID do dataset. Cada chave contém o retorno do dataset correspondente.
+
+```json
+{
+  "result": {
+    "person_basic_data": {
+      "name": "PESSOA FICTÍCIA",
+      "tax_id": "00000000000",
+      "birth_date": "1990-01-01"
+    }
+  }
+}
+```
+
+<Warning>
+  Campos descritos na estrutura do dataset podem não ser retornados em todas as consultas. Alguns dados dependem da disponibilidade da fonte e do CPF consultado.
+</Warning>
+
+## Retorno assíncrono
+
+Quando `mode` é `async`, a resposta inicial retorna `code: 202` e o processamento continua em segundo plano.
+
+### Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador da consulta assíncrona. |
+| `status` | `string` | Status atual da consulta. |
+| `status_values` | `array<string>` | Lista de status possíveis. |
+| `datasets` | `array<string>` | Datasets solicitados na consulta. |
+
+Status possíveis:
+
+| Status | Descrição |
+| --- | --- |
+| `queued` | Consulta criada e aguardando processamento. |
+| `processing` | Consulta em processamento. |
+| `completed` | Consulta finalizada com sucesso. |
+| `failed` | Consulta finalizada com falha. |
+
+Para consultar o resultado final, use o `id` retornado no endpoint de resultado assíncrono.
+
+## Respostas esperadas
+
+As respostas possíveis estão exemplificadas no painel lateral da página.
+
+| Status | Quando ocorre |
+| --- | --- |
+| `200` | Consulta síncrona concluída com sucesso. |
+| `202` | Consulta assíncrona iniciada com sucesso. |
+| `400` | Requisição inválida, CPF inválido, dataset ausente ou parâmetro incompatível. |
+| `401` | A chave da API está ausente, inválida ou não pôde ser autenticada. |
+| `403` | A credencial não possui escopo de consulta, o plano não permite acesso ou há bloqueio financeiro. |
+
+## Fluxo recomendado
+
+1. Liste os datasets disponíveis em [Datasets e preços](/api-reference/search/datasets).
+2. Selecione apenas datasets com `active: true`.
+3. Envie o CPF, os datasets e os campos adicionais necessários.
+4. Use `mode: "async"` para consultas com múltiplos datasets ou fontes online.
+5. Consulte o resultado pelo `id` retornado quando a chamada for assíncrona.

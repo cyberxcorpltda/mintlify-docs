@@ -1,0 +1,225 @@
+---
+title: "Busca por CNPJ"
+description: "Execute consultas de pessoa jurídica por CNPJ nos datasets selecionados."
+sidebarTitle: "Busca por CNPJ"
+api: "POST /v1/search/company"
+playground: "interactive"
+---
+
+Executa uma consulta de pessoa jurídica por CNPJ usando os datasets informados no corpo da requisição.
+
+Essa consulta pode ser executada em modo síncrono ou assíncrono. No modo assíncrono, a API retorna um `id` para acompanhamento posterior do resultado.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Consulta realizada com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "completed",
+    "target": "company",
+    "query": {
+      "taxid": "00000000000000",
+      "datasets": ["company_basic_data"],
+      "additional": {}
+    },
+    "cost": {
+      "total": 0.05,
+      "refunded": 0,
+      "datasets": {
+        "company_basic_data": {
+          "charged": 0.05,
+          "refunded": 0
+        }
+      }
+    },
+    "timing": {
+      "total": 0.42,
+      "datasets": {
+        "company_basic_data": 0.42
+      }
+    },
+    "errors": {},
+    "datasets_status": {
+      "company_basic_data": "completed"
+    },
+    "result": {
+      "company_basic_data": {
+        "tax_id": "00000000000000",
+        "name": "EMPRESA EXEMPLO LTDA",
+        "fantasy_name": "EXEMPLO",
+        "status": "ATIVA",
+        "opening_date": "2020-01-15"
+      }
+    },
+    "created_at": "2026-06-22T12:00:00Z",
+    "last_updated_at": "2026-06-22T12:00:01Z"
+  }
+}
+```
+
+```json 202
+{
+  "code": 202,
+  "message": "Consulta iniciada com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "queued",
+    "status_values": ["queued", "processing", "completed", "failed"],
+    "datasets": ["company_basic_data"]
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Um ou mais parâmetros informados são inválidos."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="taxid" type="string" required placeholder="00000000000000">
+  CNPJ da empresa consultada. Pontuação é aceita e removida automaticamente.
+</ParamField>
+
+<ParamField body="datasets" type="string[]" required>
+  Lista de IDs dos datasets que serão consultados.
+</ParamField>
+
+<ParamField body="additional" type="object">
+  Dados adicionais por dataset, quando algum dataset exigir parâmetros extras.
+</ParamField>
+
+<ParamField body="mode" default="async" type="string" placeholder="async">
+  Modo da consulta.
+</ParamField>
+
+Valores aceitos para `mode`:
+
+| Valor | Descrição |
+| --- | --- |
+| `async` | Inicia a consulta e retorna um `id` para acompanhar o resultado depois. |
+| `sync` | Aguarda a conclusão da consulta e retorna os dados diretamente na resposta. |
+
+<ParamField header="x-ambient" type="string" placeholder="sandbox">
+  Use `sandbox` para executar uma chamada de teste sem consumo de saldo.
+</ParamField>
+
+<Note>
+  Para detalhes sobre chamadas de teste, consulte [Ambiente de teste](/quickstart/sandbox).
+</Note>
+
+## Exemplo de corpo
+
+```json
+{
+  "taxid": "00000000000000",
+  "mode": "async",
+  "datasets": ["company_basic_data"],
+  "additional": {}
+}
+```
+
+<Warning>
+  O CNPJ acima é fictício e serve apenas para demonstrar a estrutura da requisição. Em chamadas reais ou sandbox, informe um CNPJ válido para o ambiente utilizado.
+</Warning>
+
+## Parâmetros adicionais por dataset
+
+Alguns datasets podem exigir campos adicionais. Consulte `additional_fields` em [Datasets e preços](/api-reference/search/datasets) para saber quais campos devem ser enviados.
+
+Exemplo de envio de dados adicionais:
+
+```json
+{
+  "taxid": "00000000000000",
+  "mode": "async",
+  "datasets": ["company_example_dataset"],
+  "additional": {
+    "company_example_dataset": {
+      "state": "SP"
+    }
+  }
+}
+```
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta da API.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da resposta.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Objeto principal da consulta. A estrutura varia de acordo com o modo de execução.
+</ResponseField>
+
+## Retorno síncrono
+
+Quando `mode` é `sync`, a resposta pode retornar `code: 200` com os dados completos da consulta.
+
+### Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador único da consulta. |
+| `status` | `string` | Status final da consulta. Normalmente `completed`. |
+| `target` | `string` | Tipo da consulta. Para esta rota, retorna `company`. |
+| `query` | `object` | Dados usados na consulta. |
+| `cost` | `object` | Valores cobrados e estornados. |
+| `timing` | `object` | Tempo total e tempo individual por dataset. |
+| `errors` | `object` | Erros por dataset, quando ocorrerem. |
+| `datasets_status` | `object` | Status individual de cada dataset. |
+| `result` | `object` | Resultado agrupado por dataset. |
+| `created_at` | `string` | Data de criação da consulta em ISO 8601. |
+| `last_updated_at` | `string` | Data da última atualização da consulta em ISO 8601. |
+
+## Retorno assíncrono
+
+Quando `mode` é `async`, a resposta inicial retorna `code: 202` e o processamento continua em segundo plano.
+
+Status possíveis:
+
+| Status | Descrição |
+| --- | --- |
+| `queued` | Consulta criada e aguardando processamento. |
+| `processing` | Consulta em processamento. |
+| `completed` | Consulta finalizada com sucesso. |
+| `failed` | Consulta finalizada com falha. |
+
+Para consultar o resultado final, use o `id` retornado no endpoint de resultado assíncrono.
+
+<Warning>
+  Campos descritos na estrutura do dataset podem não ser retornados em todas as consultas. Alguns dados dependem da disponibilidade da fonte e do CNPJ consultado.
+</Warning>
+
+## Fluxo recomendado
+
+1. Liste os datasets disponíveis em [Datasets e preços](/api-reference/search/datasets).
+2. Selecione apenas datasets com `active: true`.
+3. Envie o CNPJ, os datasets e os campos adicionais necessários.
+4. Use `mode: "async"` para consultas com múltiplos datasets ou fontes online.
+5. Consulte o resultado pelo `id` retornado quando a chamada for assíncrona.

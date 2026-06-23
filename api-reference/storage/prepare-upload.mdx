@@ -1,0 +1,105 @@
+---
+title: "Preparar upload"
+keywords: ["preparar upload", "assinatura upload", "storage upload", "lazy data"]
+description: "Gere uma assinatura temporária para enviar um arquivo ao armazenamento."
+sidebarTitle: "Preparar upload"
+api: "POST /v1/storage/uploads"
+playground: "interactive"
+---
+
+Cria o registro inicial do arquivo e retorna uma assinatura temporária para envio ao serviço de upload.
+
+Depois desta chamada, envie o arquivo para `upload_url` usando o header `X-LazyData-Upload-Signature`.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Assinatura de upload gerada.",
+  "result": {
+    "upload_url": "https://upload.lazydata.com.br/storage",
+    "signature": "<assinatura_de_upload>",
+    "signature_expires_at": "2026-06-22T14:00:00+00:00",
+    "max_size": 1073741824,
+    "file": {
+      "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+      "type": "file",
+      "name": "contrato.pdf",
+      "parent_id": null,
+      "extension": "pdf",
+      "content_type": null,
+      "size": 0,
+      "status": "waiting_upload",
+      "uploaded_at": null,
+      "created_at": "2026-06-22T11:59:40+00:00",
+      "updated_at": "2026-06-22T11:59:40+00:00"
+    }
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Nome do arquivo inválido."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "Limite de armazenamento excedido."
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Pasta não localizada."
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "Já existe um arquivo com este nome nesta pasta."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="name" type="string" required placeholder="contrato.pdf">
+  Nome do arquivo que será enviado.
+</ParamField>
+
+<ParamField body="parent_id" type="string">
+  ID da pasta de destino. Use `null` para enviar para a raiz.
+</ParamField>
+
+## Exemplo de corpo
+
+```json
+{
+  "name": "contrato.pdf",
+  "parent_id": null
+}
+```
+
+## Resposta
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `upload_url` | `string` | URL do serviço de upload. |
+| `signature` | `string` | Assinatura temporária usada no header de upload. |
+| `signature_expires_at` | `string` | Data de expiração da assinatura. |
+| `max_size` | `integer` | Tamanho máximo permitido em bytes. |
+| `file` | `object` | Registro inicial do arquivo. |
+
+## Próximo passo
+
+<Card title="Enviar arquivo" icon="upload" horizontal href="/api-reference/upload/storage">
+  Envie o arquivo para `https://upload.lazydata.com.br/storage` usando a assinatura retornada.
+</Card>

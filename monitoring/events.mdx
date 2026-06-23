@@ -1,0 +1,318 @@
+---
+title: "Eventos e notificações"
+keywords: ["eventos monitoramento", "notificações", "email monitoramento", "alertas", "lazy data"]
+description: "Entenda quando eventos são gerados e como as notificações de monitoramento são enviadas."
+sidebarTitle: "Eventos e notificações"
+---
+
+Os **eventos** representam novidades identificadas durante as checagens de monitoramento.
+
+Quando uma alteração relevante é encontrada, a Lazy Data registra o evento no histórico do monitoramento e pode enviar uma notificação para o e-mail configurado.
+
+<Card title="Detalhar monitoramento" icon="list-timeline" horizontal href="/api-reference/monitoring/detail">
+  Consulte os últimos eventos, status de notificação e dados salvos do monitoramento.
+</Card>
+
+## O que é um evento
+
+Um evento é criado quando uma checagem identifica diferença em relação ao snapshot anterior do monitoramento.
+
+Exemplos:
+
+- nova movimentação em um processo monitorado;
+- novo processo encontrado para um CPF ou CNPJ;
+- mudança relevante em uma fonte monitorada;
+- registro inicial do snapshot de uma fonte;
+- alteração em indicador cadastral, financeiro, restritivo ou processual habilitado.
+
+<Info>
+  Eventos são gerados por mudança detectada. Uma checagem pode ser concluída com sucesso sem gerar evento quando não há novidade.
+</Info>
+
+## Estrutura geral
+
+No detalhe do monitoramento, eventos aparecem em `events`.
+
+```json
+{
+  "events": [
+    {
+      "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+      "type": "movement",
+      "created_at": "2026-06-22T12:00:00Z",
+      "notification": {
+        "email": "alertas@example.com",
+        "sent": true,
+        "sent_at": "2026-06-22T12:00:03Z"
+      },
+      "movements_count": 1,
+      "movements": [],
+      "changes_count": 0,
+      "changes": []
+    }
+  ]
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `id` | Identificador do evento. |
+| `type` | Tipo do evento, como `initial`, `movement` ou `update`. |
+| `created_at` | Data em que o evento foi registrado. |
+| `notification` | Status da notificação por e-mail. |
+| `movements_count` | Quantidade de movimentações processuais no evento. |
+| `movements` | Movimentações registradas, quando o monitoramento for processual. |
+| `changes_count` | Quantidade de mudanças por fonte no evento. |
+| `changes` | Mudanças registradas, quando o monitoramento for de CPF ou CNPJ. |
+
+## Tipos de evento
+
+| Tipo | Quando ocorre |
+| --- | --- |
+| `initial` | Registro inicial do monitoramento ou snapshot inicial de fontes selecionadas. |
+| `movement` | Nova movimentação encontrada em um processo monitorado por número CNJ. |
+| `update` | Mudança relevante detectada em uma ou mais fontes de CPF ou CNPJ. |
+
+## Monitoramento de processo
+
+No monitoramento de processo, eventos são gerados quando novas movimentações aparecem em relação ao último snapshot salvo.
+
+O evento usa o campo `movements`.
+
+```json
+{
+  "type": "movement",
+  "movements_count": 1,
+  "movements": [
+    {
+      "date": "2026-06-18T20:56:00Z",
+      "status": "Juntada de petição",
+      "description": "Juntada de petição",
+      "code": "123"
+    }
+  ]
+}
+```
+
+Movimentações podem incluir:
+
+- data;
+- status ou título;
+- descrição;
+- código da movimentação, quando disponível.
+
+<Note>
+  Ao criar o monitoramento processual, a Lazy Data salva um snapshot inicial. Depois disso, apenas movimentações novas em relação ao snapshot geram eventos de novidade.
+</Note>
+
+## Monitoramento de pessoa física
+
+No monitoramento de pessoa física, eventos são gerados quando uma fonte selecionada apresenta mudança relevante para o CPF.
+
+Exemplos:
+
+- novo processo vinculado ao CPF;
+- alteração em fonte cadastral ou restritiva;
+- mudança em indicador financeiro;
+- atualização em fonte monitorada.
+
+Esses eventos usam o campo `changes`.
+
+```json
+{
+  "type": "update",
+  "changes_count": 1,
+  "changes": [
+    {
+      "source_id": "person_processes",
+      "source_name": "Processos",
+      "type": "update",
+      "summary": "Novo processo encontrado.",
+      "checked_at": "2026-06-22T12:00:00Z",
+      "new_process_count": 1,
+      "new_processes": [
+        {
+          "process_number": "0000001-77.2026.8.26.0000"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Quando a fonte de processos está selecionada, o evento informa novos processos encontrados para o CPF. Ele não acompanha movimentações internas desses processos.
+
+## Monitoramento de pessoa jurídica
+
+No monitoramento de pessoa jurídica, eventos são gerados quando uma fonte selecionada apresenta mudança relevante para o CNPJ.
+
+Exemplos:
+
+- novo processo vinculado ao CNPJ;
+- alteração em fonte empresarial;
+- mudança em indicador restritivo ou financeiro;
+- atualização em fonte monitorada.
+
+Assim como em pessoa física, eventos de CNPJ usam `changes`.
+
+Quando a fonte de processos está selecionada, o evento informa novos processos encontrados para o CNPJ. Para acompanhar movimentações internas, use monitoramento de processo por número CNJ.
+
+## Mudanças por fonte
+
+Cada item em `changes[]` representa uma mudança detectada em uma fonte monitorada.
+
+| Campo | Descrição |
+| --- | --- |
+| `source_id` | ID da fonte onde a mudança foi detectada. |
+| `source_name` | Nome amigável da fonte. |
+| `type` | Tipo da mudança, como `initial` ou `update`. |
+| `summary` | Resumo objetivo da alteração. |
+| `checked_at` | Data da checagem. |
+| `details` | Detalhes relevantes extraídos da fonte. |
+| `process_count` | Total de processos identificados, quando a fonte for processual. |
+| `new_process_count` | Quantidade de novos processos encontrados. |
+| `new_processes` | Lista resumida de novos processos, quando aplicável. |
+
+## Notificações
+
+Quando um evento é criado, a Lazy Data tenta enviar uma notificação para o e-mail configurado no monitoramento.
+
+O status do envio fica em `event.notification`.
+
+| Campo | Descrição |
+| --- | --- |
+| `email` | E-mail configurado para receber alertas. |
+| `sent` | Indica se o envio foi concluído com sucesso. |
+| `sent_at` | Data de envio, quando `sent` for `true`. |
+
+Se o envio do e-mail falhar, o evento continua registrado no histórico. Nesse caso, `notification.sent` pode retornar `false`.
+
+## Quando a notificação é enviada
+
+Uma notificação é enviada quando a checagem gera um evento.
+
+Situações comuns:
+
+| Situação | Notificação |
+| --- | --- |
+| Nova movimentação em processo monitorado | Envia alerta processual. |
+| Nova fonte ou snapshot inicial relevante em CPF/CNPJ | Pode enviar alerta inicial. |
+| Mudança em fonte monitorada de CPF/CNPJ | Envia alerta de atualização. |
+| Checagem sem novidade | Não envia notificação de novidade. |
+| Falha temporária de provedor | Não representa novidade; pode apenas atualizar estado interno. |
+
+## Agrupamento
+
+Uma única checagem pode detectar várias novidades.
+
+Nesses casos:
+
+- monitoramento de processo pode agrupar várias movimentações no mesmo evento;
+- monitoramento de CPF ou CNPJ pode agrupar mudanças de várias fontes no mesmo evento;
+- o e-mail pode resumir as novidades para evitar excesso de mensagens.
+
+## E-mail de notificação
+
+Cada monitoramento possui um `notification_email`.
+
+Esse e-mail não precisa ser o mesmo usuário proprietário da conta. Para operações críticas, use uma caixa compartilhada ou lista monitorada pela equipe responsável.
+
+O conteúdo do e-mail pode incluir:
+
+- nome do monitoramento;
+- CPF, CNPJ ou número do processo monitorado;
+- tribunal, quando o monitoramento for processual;
+- fonte onde a mudança ocorreu;
+- resumo da novidade;
+- dados principais do evento;
+- link para acessar o painel.
+
+Dados extensos podem ser resumidos no e-mail e exibidos com mais detalhes no painel.
+
+## Frequência e eventos
+
+A frequência define quando a próxima checagem será executada.
+
+Um evento só pode ser gerado quando uma checagem ocorre e encontra diferença em relação ao snapshot anterior.
+
+| Frequência | Comportamento |
+| --- | --- |
+| Diária | Pode gerar eventos uma vez por dia, se houver novidade. |
+| Semanal | Pode gerar eventos uma vez por semana, se houver novidade. |
+| Mensal | Pode gerar eventos uma vez por mês, se houver novidade. |
+
+Em monitoramentos de CPF e CNPJ, cada fonte pode ter sua própria frequência. Por isso, nem todas as fontes são verificadas na mesma checagem.
+
+## Ausência de novidades
+
+Se não houver mudança relevante, a checagem não gera evento de novidade e não envia e-mail de atualização.
+
+O monitoramento continua ativo e a próxima checagem é agendada normalmente.
+
+<Warning>
+  Ausência de evento não significa necessariamente ausência de cobrança. A cobrança é calculada por checagem executada conforme a configuração do monitoramento e das fontes selecionadas.
+</Warning>
+
+## Falhas de checagem
+
+Se uma checagem falhar por erro temporário, a Lazy Data pode registrar a falha internamente e tentar novamente conforme política de retry.
+
+Falhas recorrentes podem pausar o monitoramento ou alterar seu status.
+
+Status relacionados:
+
+| Status | Interpretação |
+| --- | --- |
+| `paused_insufficient_balance` | Checagem pausada por saldo insuficiente. |
+| `paused_monthly_limit` | Checagem pausada por limite mensal atingido. |
+| `paused_plan_restricted` | Checagem pausada por restrição de plano, conta ou subconta. |
+| `paused_invalid_process` | Processo indisponível após falhas recorrentes. |
+| `error` | Falha não recuperada. |
+
+## Histórico no painel
+
+Os eventos ficam disponíveis nos detalhes do monitoramento.
+
+No painel, é possível visualizar:
+
+- eventos recentes;
+- data e hora da checagem;
+- tipo do evento;
+- fonte afetada;
+- movimentações processuais;
+- mudanças por fonte;
+- status de envio do e-mail;
+- histórico salvo do monitoramento.
+
+<Card title="Detalhar monitoramento" icon="list-timeline" horizontal href="/api-reference/monitoring/detail">
+  Veja como consultar os eventos retornados pela API.
+</Card>
+
+## Boas práticas
+
+- Use e-mails de grupo ou caixas compartilhadas para monitoramentos críticos.
+- Evite frequência alta em monitoramentos de baixa prioridade.
+- Revise monitoramentos sem eventos por longos períodos para reduzir custo desnecessário.
+- Mantenha saldo suficiente para evitar pausas automáticas.
+- Consulte o painel quando o e-mail trouxer apenas um resumo.
+- Trate `notification.sent: false` como falha de entrega, não como ausência de evento.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Monitoramento de processo" icon="gavel" href="/monitoring/process">
+    Veja como funcionam eventos de movimentação processual.
+  </Card>
+
+  <Card title="Pessoa física" icon="user" href="/monitoring/person">
+    Entenda eventos gerados por fontes vinculadas a CPF.
+  </Card>
+
+  <Card title="Pessoa jurídica" icon="building" href="/monitoring/company">
+    Entenda eventos gerados por fontes vinculadas a CNPJ.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/monitoring">
+    Consulte falhas de monitoramento, cobrança, provedor e validação.
+  </Card>
+</Columns>

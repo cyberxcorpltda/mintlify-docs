@@ -1,0 +1,246 @@
+---
+title: "Datasets disponíveis"
+description: "Liste os datasets que podem ser usados em enriquecimentos PF ou PJ."
+sidebarTitle: "Datasets disponíveis"
+api: "GET /v1/enrichment/datasets/{target}"
+playground: "interactive"
+keywords: ["datasets enriquecimento", "enriquecimento pf", "enriquecimento pj", "preços enriquecimento", "lazy data"]
+---
+
+Retorna os datasets disponíveis para uso em enriquecimentos de pessoa física ou pessoa jurídica.
+
+Use esta rota antes de iniciar o processamento para montar a seleção de datasets, estimar o custo por linha e identificar campos adicionais exigidos.
+
+<Info>
+  Esta listagem é específica para enriquecimento. Ela retorna apenas datasets ativos e habilitados para processamento em massa.
+</Info>
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Datasets de enriquecimento retornados com sucesso.",
+  "result": {
+    "type": "pf",
+    "currency": "BRL",
+    "view": "simple",
+    "datasets": [
+      {
+        "id": "person_basic_data",
+        "name": "Dados básicos",
+        "price": 0.05,
+        "active": true,
+        "debit_only_if_found": false
+      }
+    ]
+  }
+}
+```
+
+```json 200
+{
+  "code": 200,
+  "message": "Datasets de enriquecimento retornados com sucesso.",
+  "result": {
+    "type": "pf",
+    "currency": "BRL",
+    "view": "complete",
+    "datasets": [
+      {
+        "id": "person_basic_data",
+        "name": "Dados básicos",
+        "price": 0.05,
+        "active": true,
+        "debit_only_if_found": false,
+        "description": "Informações cadastrais consolidadas do CPF consultado.",
+        "source": "database",
+        "additional_fields": {},
+        "struct_type": "object",
+        "struct": {
+          "name": {
+            "type": "string",
+            "description": "Nome da pessoa consultada."
+          },
+          "tax_id": {
+            "type": "string",
+            "description": "CPF consultado."
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Tipo de enriquecimento inválido."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A funcionalidade de consulta não está habilitada para a conta atual."
+}
+```
+
+</ResponseExample>
+
+## Parâmetros
+
+<ParamField path="target" type="string" required placeholder="pf">
+  Tipo de enriquecimento usado para listar datasets disponíveis.
+</ParamField>
+
+Valores aceitos para `target`:
+
+| Valor | Descrição |
+| --- | --- |
+| `pf` | Datasets de pessoa física para enriquecimento por CPF. |
+| `person` | Alias de `pf`. |
+| `pj` | Datasets de pessoa jurídica para enriquecimento por CNPJ. |
+| `company` | Alias de `pj`. |
+
+<ParamField query="view" default="complete" type="string" placeholder="simple">
+  Formato da listagem retornada.
+</ParamField>
+
+Valores aceitos para `view`:
+
+| Valor | Descrição |
+| --- | --- |
+| `simple` | Retorna apenas dados mínimos para seleção, custo e processamento. |
+| `complete` | Retorna dados mínimos, descrição, origem, campos adicionais e estrutura de retorno. |
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta da API.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da resposta.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Objeto principal com o tipo de enriquecimento, moeda, visualização usada e datasets disponíveis.
+</ResponseField>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `type` | `string` | Tipo do enriquecimento: `pf` ou `pj`. |
+| `currency` | `string` | Moeda usada nos preços retornados. Atualmente `BRL`. |
+| `view` | `string` | Visualização usada no retorno: `simple` ou `complete`. |
+| `datasets` | `array<object>` | Lista de datasets disponíveis para enriquecimento. |
+
+## Visualização simplificada
+
+Use `view=simple` quando você precisa apenas montar a seleção de datasets ou calcular a estimativa de custo.
+
+### Estrutura de `result.datasets[]`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador do dataset. Use este valor no campo `datasets` ao iniciar o enriquecimento. |
+| `name` | `string` | Nome amigável exibido no painel ou na sua interface. |
+| `price` | `number` | Preço por linha processada naquele dataset, já com regras comerciais aplicadas à conta autenticada. |
+| `active` | `boolean` | Indica se o dataset está ativo. Nesta rota, os datasets retornados já são utilizáveis. |
+| `debit_only_if_found` | `boolean` | Indica se a cobrança final do dataset ocorre apenas quando houver retorno útil. |
+
+## Visualização completa
+
+Use `view=complete` quando você precisa exibir descrição, campos adicionais ou estrutura esperada de retorno.
+
+### Estrutura de `result.datasets[]`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador do dataset. |
+| `name` | `string` | Nome amigável do dataset. |
+| `price` | `number` | Preço por linha processada naquele dataset. |
+| `active` | `boolean` | Indica se o dataset está ativo. |
+| `debit_only_if_found` | `boolean` | Indica se pode haver estorno quando não houver retorno útil. |
+| `description` | `string` | Descrição do dataset e do tipo de informação retornada. |
+| `source` | `string` | Origem operacional do dataset. |
+| `additional_fields` | `object` | Campos adicionais exigidos pelo dataset, quando houver. |
+| `struct_type` | `string` | Tipo da estrutura de retorno esperada. |
+| `struct` | `object` | Descrição dos campos que podem ser retornados pelo dataset. |
+
+## Campos adicionais
+
+Quando um dataset exigir parâmetros extras, eles aparecem em `additional_fields`.
+
+Exemplo:
+
+```json
+{
+  "additional_fields": {
+    "state": {
+      "type": "string",
+      "label": "UF",
+      "required": true,
+      "description": "Sigla da unidade federativa usada no processamento."
+    }
+  }
+}
+```
+
+Ao iniciar o enriquecimento, envie esses valores no campo `additional`, usando o ID do dataset como chave:
+
+```json
+{
+  "document_column": 0,
+  "datasets": ["person_example_dataset"],
+  "additional": {
+    "person_example_dataset": {
+      "state": "SP"
+    }
+  }
+}
+```
+
+## Estimativa de custo
+
+O custo estimado do enriquecimento é calculado a partir da quantidade de linhas válidas e da soma dos preços dos datasets selecionados.
+
+```text
+linhas válidas x soma dos preços dos datasets
+```
+
+Se um dataset tiver `debit_only_if_found: true`, a execução pode gerar estorno parcial ao final quando não houver retorno útil para determinadas linhas.
+
+## Respostas esperadas
+
+As respostas possíveis estão exemplificadas no painel lateral da página.
+
+| Status | Quando ocorre |
+| --- | --- |
+| `200` | Datasets retornados com sucesso. |
+| `400` | O `target` ou `view` informado não é aceito. |
+| `401` | A chave da API está ausente, inválida ou não pôde ser autenticada. |
+| `403` | A credencial não possui escopo de enriquecimento, o plano não permite acesso ou há bloqueio financeiro. |
+| `422` | Validação do parâmetro de rota ou query falhou no schema da API reference. |
+
+## Como usar no fluxo
+
+1. Crie o enriquecimento e envie o arquivo.
+2. Aguarde o status `waiting_configuration`.
+3. Liste os datasets disponíveis para o tipo do enriquecimento.
+4. Escolha os IDs dos datasets retornados nesta rota.
+5. Envie os IDs em [Configurar e executar](/api-reference/enrichment/start).
+
+<Warning>
+  Datasets retornados em [Datasets e preços](/api-reference/search/datasets) podem não estar habilitados para enriquecimento. Para enriquecimento, use esta rota.
+</Warning>

@@ -1,0 +1,395 @@
+---
+title: "Validação cadastral"
+description: "Compare dados cadastrais informados com dados disponíveis na base e receba score, status e ação recomendada."
+sidebarTitle: "Validação cadastral"
+api: "POST /v1/validation/registration"
+playground: "interactive"
+---
+
+Executa uma validação cadastral de pessoa física ou pessoa jurídica, comparando os dados informados com dados disponíveis na base.
+
+Use esta rota para validar cadastros, identificar divergências, apoiar onboarding, análise antifraude, revisão manual e regras internas de aprovação.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Validação cadastral concluída com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "completed",
+    "test": false,
+    "validation": {
+      "id": "registration_validation",
+      "name": "Validação cadastral",
+      "type": "registration"
+    },
+    "cost": {
+      "total": 0.08,
+      "charged": 0.08,
+      "refunded": 0
+    },
+    "timing": {
+      "total": 2.31
+    },
+    "registration": {
+      "model": "pf",
+      "status": "approved",
+      "score": 92.5,
+      "identity_score": 88,
+      "evidence_bonus": 4.5,
+      "recommended_action": "approve",
+      "summary": "Identidade principal compatível; evidências auxiliares confirmadas parcialmente.",
+      "critical_errors": [],
+      "compared_data": {
+        "document": "00000000000",
+        "name": "PESSOA EXEMPLO DOS SANTOS",
+        "birth_or_opening_date": "1990-01-01"
+      },
+      "field_results": {
+        "document": {
+          "status": "confirmed",
+          "impact": "positive",
+          "score": 100,
+          "message": "Documento confirmado na base."
+        },
+        "name": {
+          "status": "confirmed",
+          "impact": "positive",
+          "score": 91.2,
+          "message": "Nome compatível com a base."
+        },
+        "address": {
+          "status": "partial",
+          "impact": "positive",
+          "score": 78.5,
+          "message": "Endereço parcialmente confirmado na base."
+        }
+      }
+    }
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "CPF inválido."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso."
+}
+```
+
+```json 502
+{
+  "code": 502,
+  "message": "Não foi possível consultar o provedor da validação."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="model" type="string" required placeholder="pf">
+  Modelo cadastral analisado. Use `pf` para pessoa física ou `pj` para pessoa jurídica.
+</ParamField>
+
+<ParamField body="document" type="string" required>
+  CPF ou CNPJ do cadastro. Pontuação é aceita e removida automaticamente.
+</ParamField>
+
+<ParamField body="name" type="string">
+  Nome da pessoa ou razão social.
+</ParamField>
+
+<ParamField body="birthdate" type="string">
+  Data de nascimento em validações PF. Recomenda-se o formato `yyyy-mm-dd`.
+</ParamField>
+
+<ParamField body="opening_date" type="string">
+  Data de abertura em validações PJ. Recomenda-se o formato `yyyy-mm-dd`.
+</ParamField>
+
+<ParamField body="mother_name" type="string">
+  Nome da mãe em validações PF.
+</ParamField>
+
+<ParamField body="father_name" type="string">
+  Nome do pai em validações PF.
+</ParamField>
+
+<ParamField body="trade_name" type="string">
+  Nome fantasia em validações PJ.
+</ParamField>
+
+<ParamField body="email" type="string">
+  E-mail informado como evidência auxiliar.
+</ParamField>
+
+<ParamField body="phone" type="string">
+  Telefone informado como evidência auxiliar. Pontuação e prefixos são normalizados.
+</ParamField>
+
+<ParamField body="address" type="object">
+  Endereço informado como evidência auxiliar.
+</ParamField>
+
+<ParamField header="x-ambient" type="string" placeholder="sandbox">
+  Use `sandbox` para executar uma chamada de teste sem consumo de saldo.
+</ParamField>
+
+<Note>
+  Para detalhes sobre chamadas de teste, consulte [Ambiente de teste](/quickstart/sandbox).
+</Note>
+
+## Estrutura de `address`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `zipcode` | `string` | CEP informado. Pontuação é removida automaticamente. |
+| `street` | `string` | Logradouro informado. |
+| `number` | `string` | Número informado. |
+| `complement` | `string` | Complemento informado. |
+| `district` | `string` | Bairro informado. |
+| `city` | `string` | Cidade informada. |
+| `state` | `string` | UF informada. |
+
+## Exemplo de corpo PF
+
+```json
+{
+  "model": "pf",
+  "document": "00000000000",
+  "name": "PESSOA EXEMPLO DOS SANTOS",
+  "birthdate": "1990-01-01",
+  "mother_name": "MARIA EXEMPLO DOS SANTOS",
+  "email": "contato@example.com",
+  "phone": "11999990000",
+  "address": {
+    "zipcode": "01001000",
+    "street": "Rua Exemplo",
+    "number": "100",
+    "city": "São Paulo",
+    "state": "SP"
+  }
+}
+```
+
+## Exemplo de corpo PJ
+
+```json
+{
+  "model": "pj",
+  "document": "00000000000000",
+  "name": "EMPRESA EXEMPLO LTDA",
+  "trade_name": "EMPRESA EXEMPLO",
+  "opening_date": "2020-01-01",
+  "email": "contato@example.com",
+  "phone": "1130000000",
+  "address": {
+    "zipcode": "01001000",
+    "street": "Rua Exemplo",
+    "number": "100",
+    "city": "São Paulo",
+    "state": "SP"
+  }
+}
+```
+
+<Warning>
+  Os documentos acima são fictícios e servem apenas para demonstrar a estrutura da requisição.
+</Warning>
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta da API.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da resposta.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Objeto principal com o identificador da validação, cobrança, tempo de execução e resultado cadastral.
+</ResponseField>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador único da validação. |
+| `status` | `string` | Status da execução. Para esta rota, normalmente `completed`. |
+| `test` | `boolean` | Indica se a chamada foi executada em ambiente de teste. |
+| `validation` | `object` | Metadados da validação executada. |
+| `cost` | `object` | Valores cobrados ou estornados. |
+| `timing` | `object` | Tempo de execução em segundos. |
+| `registration` | `object` | Resultado consolidado da validação cadastral. |
+
+## Estrutura de `result.validation`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador da validação executada. |
+| `name` | `string` | Nome amigável da validação. |
+| `type` | `string` | Tipo da validação. Para esta rota, retorna `registration`. |
+
+## Estrutura de `result.cost`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `total` | `number` | Valor total da validação. |
+| `charged` | `number` | Valor debitado nesta chamada. Em sandbox, retorna `0`. |
+| `refunded` | `number` | Valor estornado, quando houver. |
+
+## Estrutura de `result.timing`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `total` | `number` | Tempo total de execução em segundos. |
+
+## Estrutura de `result.registration`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `model` | `string` | Modelo analisado: `pf` ou `pj`. |
+| `status` | `string` | Status consolidado da validação. |
+| `score` | `number` | Pontuação final da validação, de `0` a `100`. |
+| `identity_score` | `number` | Pontuação calculada apenas com campos de identidade verificáveis. |
+| `evidence_bonus` | `number` | Bônus agregado por evidências auxiliares confirmadas, como endereço, telefone ou e-mail. |
+| `recommended_action` | `string` | Ação recomendada para o cadastro. |
+| `summary` | `string` | Resumo objetivo dos principais pontos encontrados. |
+| `critical_errors` | `array<string>` | Divergências críticas que impedem aprovação automática. |
+| `compared_data` | `object` | Dados da base usados na comparação para os campos informados. |
+| `field_results` | `object` | Resultado detalhado da comparação por campo. |
+
+## Valores de `status`
+
+| Valor | Descrição |
+| --- | --- |
+| `approved` | Dados compatíveis com a base. |
+| `manual_review` | Dados parcialmente compatíveis ou evidências insuficientes para aprovação automática. |
+| `rejected` | Foram encontradas divergências críticas. |
+
+## Valores de `recommended_action`
+
+| Valor | Descrição |
+| --- | --- |
+| `approve` | O cadastro pode seguir automaticamente, conforme a política da sua aplicação. |
+| `manual_review` | Revisão manual recomendada. |
+| `reject` | Rejeição recomendada por divergência crítica. |
+| `insufficient_data` | Dados insuficientes para aprovação automática. |
+
+## Estrutura de `field_results`
+
+O objeto `field_results` é indexado pelo nome do campo comparado.
+
+Campos comuns:
+
+| Campo | Quando aparece |
+| --- | --- |
+| `document` | CPF ou CNPJ. |
+| `name` | Nome da pessoa ou razão social. |
+| `birth_or_opening_date` | Data de nascimento ou abertura. |
+| `trade_name` | Nome fantasia em validações PJ. |
+| `mother_name` | Nome da mãe em validações PF. |
+| `father_name` | Nome do pai em validações PF. |
+| `address` | Endereço informado como evidência auxiliar. |
+| `phone` | Telefone informado como evidência auxiliar. |
+| `email` | E-mail informado como evidência auxiliar. |
+
+Cada campo comparado pode retornar:
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `status` | `string` | Resultado individual do campo. |
+| `impact` | `string` | Impacto do campo na decisão. |
+| `score` | `number` | Pontuação individual do campo, de `0` a `100` quando aplicável. |
+| `message` | `string` | Explicação objetiva do resultado. |
+| `similarity` | `number` | Similaridade textual, quando aplicável. |
+
+## Valores de `field_results.*.status`
+
+| Valor | Descrição |
+| --- | --- |
+| `confirmed` | Campo confirmado na base. |
+| `partial` | Campo parcialmente compatível. |
+| `mismatch` | Campo divergente. |
+| `not_available` | Campo não disponível na base para comparação. |
+| `not_provided` | Campo não informado na requisição. |
+| `not_applicable` | Campo não aplicável ao modelo analisado. |
+
+## Valores de `field_results.*.impact`
+
+| Valor | Descrição |
+| --- | --- |
+| `positive` | Evidência favorável. |
+| `negative` | Evidência desfavorável. |
+| `critical` | Divergência crítica. |
+| `neutral` | Sem impacto relevante na decisão. |
+
+## Estrutura de `compared_data`
+
+O campo `compared_data` retorna apenas dados usados na comparação e pode variar conforme o modelo e os campos informados.
+
+| Campo | Descrição |
+| --- | --- |
+| `document` | CPF ou CNPJ encontrado na base e usado na comparação. |
+| `name` | Nome da pessoa ou razão social encontrada na base. |
+| `birth_or_opening_date` | Data de nascimento ou abertura encontrada na base. |
+| `trade_name` | Nome fantasia encontrado na base, quando aplicável. |
+| `mother_name` | Nome da mãe encontrado na base, quando aplicável. |
+| `father_name` | Nome do pai encontrado na base, quando aplicável. |
+| `email` | E-mail confirmado na base, retornado apenas quando corresponde ao e-mail informado. |
+
+<Warning>
+  Campos de `compared_data` e `field_results` podem não aparecer em todas as validações. A disponibilidade depende do modelo, dos dados informados e das informações existentes na base.
+</Warning>
+
+## Ambiente de teste
+
+Para executar uma chamada sem consumo de saldo, envie o header:
+
+```http
+x-ambient: sandbox
+```
+
+Em chamadas de teste, `test` retorna `true` e `charged` retorna `0`.
+
+## Respostas esperadas
+
+As respostas possíveis estão exemplificadas no painel lateral da página.
+
+| Status | Quando ocorre |
+| --- | --- |
+| `200` | Validação cadastral concluída com sucesso. |
+| `400` | Documento inválido, modelo inválido ou dados insuficientes para validação. |
+| `401` | A chave da API está ausente, inválida ou não pôde ser autenticada. |
+| `403` | A credencial não possui escopo de validação, o plano não permite acesso ou há bloqueio financeiro. |
+| `422` | Validação do corpo da requisição falhou no schema da API reference. |
+| `502` | Falha ao consultar o provedor da validação. |
+
+## Regras importantes
+
+- A credencial usada precisa possuir o escopo de validação.
+- O plano da conta precisa permitir API e validações.
+- `model` deve ser `pf` ou `pj`.
+- Para `pf`, `document` deve ser um CPF válido.
+- Para `pj`, `document` deve ser um CNPJ válido.
+- Envie ao menos um campo útil além do documento para obter uma validação mais conclusiva.
+- Chamadas reais debitam o valor da validação conforme o preço vigente da conta.
+- A decisão final da sua aplicação deve considerar `recommended_action`, `score`, `critical_errors` e sua regra de negócio interna.

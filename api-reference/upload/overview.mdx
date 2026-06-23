@@ -1,0 +1,142 @@
+---
+title: "Visão geral"
+keywords: ["upload", "arquivos", "assinatura", "s3", "enriquecimento", "armazenamento", "lazy data"]
+description: "Entenda como funcionam uploads de arquivos na API da Lazy Data."
+sidebarTitle: "Visão geral"
+---
+
+O upload de arquivos na Lazy Data é usado em fluxos que precisam enviar arquivos para processamento ou armazenamento.
+
+Atualmente, os principais usos são:
+
+- **Enriquecimento**: envio de bases para processamento em massa.
+- **Armazenamento**: envio de arquivos para organização no espaço de storage da conta.
+
+<Info>
+  O upload não deve ser feito enviando arquivos diretamente para endpoints comuns da API. O fluxo recomendado usa uma assinatura temporária de upload.
+</Info>
+
+## Fluxo geral
+
+O fluxo de upload é dividido em etapas para manter segurança, controle de tamanho e rastreabilidade.
+
+<Steps>
+  <Step title="Solicite a assinatura de upload">
+    A aplicação informa o destino do upload, nome do arquivo, tamanho e tipo de conteúdo.
+  </Step>
+  <Step title="Envie o arquivo para a URL assinada">
+    Use a URL temporária retornada para enviar o arquivo diretamente ao storage.
+  </Step>
+  <Step title="Confirme ou use o arquivo no recurso desejado">
+    Depois do envio, vincule o arquivo ao fluxo de enriquecimento ou armazenamento.
+  </Step>
+</Steps>
+
+## Quando usar upload
+
+| Caso | Uso recomendado |
+| --- | --- |
+| Enviar planilha para enriquecimento | Use o fluxo de upload para enriquecimento. |
+| Salvar arquivo na conta | Use o fluxo de upload para armazenamento. |
+| Enviar imagem para comparação facial | Não use o fluxo de upload; envie a imagem em Base64 no endpoint de validação facial. |
+| Enviar documento pequeno como parâmetro de uma consulta | Use o corpo da requisição quando o endpoint documentado aceitar esse formato. |
+
+## Segurança
+
+As URLs assinadas são temporárias e devem ser usadas apenas para o arquivo informado na solicitação.
+
+Boas práticas:
+
+- Gere uma assinatura por arquivo.
+- Não reutilize URLs assinadas.
+- Não exponha a URL assinada em logs públicos.
+- Valide tamanho e tipo do arquivo antes de solicitar a assinatura.
+- Envie o arquivo logo após obter a assinatura.
+- Trate expiração da assinatura solicitando uma nova URL.
+
+## Limites
+
+| Item | Regra |
+| --- | --- |
+| Tamanho máximo por arquivo | Até `1024 MB` quando o destino permitir. |
+| Quantidade de arquivos | Depende do recurso usado e dos limites da conta. |
+| Espaço disponível | Para armazenamento, o upload respeita o limite de storage da conta. |
+| Tipos aceitos | Variam conforme o destino: enriquecimento ou armazenamento. |
+
+<Warning>
+  Mesmo que o endpoint de assinatura aceite um arquivo grande, o recurso final pode aplicar regras próprias. Por exemplo, enriquecimento pode restringir formatos de planilha, enquanto armazenamento pode aceitar mais tipos de arquivo.
+</Warning>
+
+## Enriquecimento
+
+Use upload para enriquecimento quando precisar enviar uma base que será processada em massa.
+
+Normalmente esse fluxo envolve:
+
+1. Enviar o arquivo de entrada.
+2. Criar ou configurar o enriquecimento.
+3. Mapear colunas, datasets e opções de processamento.
+4. Acompanhar execução.
+5. Baixar o arquivo final quando estiver concluído.
+
+<Card title="Upload para enriquecimento" icon="table" horizontal href="/api-reference/upload/enrichment">
+  Veja formatos aceitos, regras de arquivo e como o upload se conecta ao fluxo de enriquecimento.
+</Card>
+
+## Armazenamento
+
+Use upload para armazenamento quando quiser salvar arquivos no espaço da conta.
+
+Normalmente esse fluxo envolve:
+
+1. Selecionar a pasta de destino.
+2. Solicitar a assinatura de upload.
+3. Enviar o arquivo.
+4. Registrar ou confirmar o arquivo no storage.
+5. Listar, renomear, baixar ou apagar o arquivo posteriormente.
+
+<Card title="Upload para armazenamento" icon="folder-open" horizontal href="/api-reference/upload/storage">
+  Veja como enviar arquivos para pastas e manter os dados organizados no armazenamento da conta.
+</Card>
+
+## Metadados comuns
+
+Ao solicitar uma assinatura de upload, normalmente serão necessários metadados como:
+
+| Campo | Descrição |
+| --- | --- |
+| `filename` | Nome original do arquivo. |
+| `content_type` | Tipo MIME do arquivo, como `text/csv` ou `application/pdf`. |
+| `size` | Tamanho do arquivo em bytes. |
+| `target` | Destino do upload, como enriquecimento ou armazenamento. |
+| `path_id` | Pasta de destino, quando o upload for para armazenamento. |
+
+<Note>
+  Os campos exatos podem variar conforme o endpoint específico de enriquecimento ou armazenamento.
+</Note>
+
+## Respostas e erros
+
+Uploads podem falhar por motivos como:
+
+| Motivo | Exemplo |
+| --- | --- |
+| Arquivo grande demais | O tamanho informado ultrapassa o limite permitido. |
+| Tipo não permitido | O formato não é aceito para o destino escolhido. |
+| Assinatura expirada | A URL temporária expirou antes do envio. |
+| Storage insuficiente | A conta não possui espaço disponível para armazenar o arquivo. |
+| Permissão ausente | A credencial da API não possui escopo para o recurso. |
+
+<Card title="Códigos de erro" icon="triangle-exclamation" horizontal href="/errors/upload">
+  Consulte os erros específicos relacionados a upload de arquivos.
+</Card>
+
+## Boas práticas
+
+- Calcule o tamanho do arquivo antes de solicitar a assinatura.
+- Use o `content_type` real do arquivo.
+- Para enriquecimento, valide cabeçalhos e colunas antes do envio.
+- Para armazenamento, confirme se a pasta de destino existe.
+- Não tente enviar novamente para uma URL assinada expirada.
+- Se o upload falhar no envio para o storage, solicite uma nova assinatura.
+- Mantenha o identificador retornado pelo fluxo para vincular o arquivo ao recurso correto.

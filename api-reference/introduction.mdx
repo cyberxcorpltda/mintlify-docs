@@ -1,0 +1,113 @@
+---
+title: "Introdução"
+description: "Entenda os conceitos básicos para integrar com a API da Lazy Data."
+sidebarTitle: "Introdução"
+keywords: ["api lazy data", "api reference", "integração", "credenciais", "autenticação", "sandbox"]
+---
+
+A **API da Lazy Data** permite integrar consultas, validações, monitoramentos, enriquecimentos, armazenamento e histórico aos seus próprios sistemas.
+
+Esta seção reúne os conceitos básicos que valem para as requisições da API, como autenticação, ambiente de teste, padrão de resposta e tratamento de erros.
+
+<Card title="Antes de começar" icon="key" horizontal href="/quickstart/credentials">
+  Obtenha sua chave de API no painel, configure permissões e prepare sua primeira integração.
+</Card>
+
+## Primeiros passos
+
+<Columns cols={2}>
+  <Card title="Obter credenciais" icon="key" href="/quickstart/credentials">
+    Veja onde criar e gerenciar suas chaves de API no painel da Lazy Data.
+  </Card>
+
+  <Card title="Autenticação" icon="lock" href="/quickstart/authentication">
+    Entenda como enviar o token no header `Authorization` e autenticar suas requisições.
+  </Card>
+
+  <Card title="Ambiente de teste" icon="flask" href="/quickstart/sandbox">
+    Use `x-ambient: sandbox` para validar integrações sem consumir saldo da conta.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/overview">
+    Consulte o padrão de erro da API e como tratar falhas de validação, saldo, plano ou provedor.
+  </Card>
+</Columns>
+
+## Autenticação
+
+Todas as rotas protegidas usam autenticação via Bearer token.
+
+Envie sua chave de API no header:
+
+```http
+Authorization: Bearer <sua_chave_de_api>
+```
+
+<Info>
+  Não envie a chave em query string, corpo da requisição, logs públicos ou aplicações frontend sem backend intermediário.
+</Info>
+
+Para mais detalhes, consulte [Autenticação](/quickstart/authentication).
+
+## Ambiente de teste
+
+Alguns endpoints aceitam chamadas de teste por meio do header:
+
+```http
+x-ambient: sandbox
+```
+
+Quando esse header é aceito, a API retorna uma resposta simulada ou controlada sem consumir saldo da conta.
+
+<Card title="Ver regras do sandbox" icon="flask" horizontal href="/quickstart/sandbox">
+  Consulte quais funcionalidades aceitam teste e como validar integrações com segurança.
+</Card>
+
+## Padrão de resposta
+
+As respostas da API seguem o contrato base:
+
+```json
+{
+  "code": 200,
+  "message": "Operação realizada com sucesso.",
+  "result": {}
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `code` | Código HTTP ou código interno usado para tratamento programático. |
+| `message` | Mensagem descritiva da resposta. |
+| `result` | Dados retornados pela operação. Em erros, pode retornar `null` ou detalhes da validação. |
+
+## Erros
+
+Erros também seguem o mesmo contrato base:
+
+```json
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso.",
+  "result": null
+}
+```
+
+<Card title="Códigos de erro" icon="triangle-exclamation" horizontal href="/errors/overview">
+  Veja como identificar e tratar erros de autenticação, plano, saldo, parâmetros e provedores.
+</Card>
+
+## Boas práticas
+
+- Use uma credencial por aplicação, ambiente ou integração crítica.
+- Habilite restrição de IP quando a integração usar servidores com origem previsível.
+- Use `sandbox` para validar payloads antes de executar chamadas reais.
+- Não armazene documentos, imagens ou retornos sensíveis em logs sem necessidade.
+- Trate `401` e `403` separadamente: `401` indica falha de autenticação; `403` indica bloqueio de permissão, plano, IP, saldo ou política.
+- Em chamadas assíncronas, persista o `id` retornado para consultar o resultado posteriormente.
+
+## Próximo passo
+
+<Card title="Criar e usar sua credencial" icon="arrow-right" horizontal href="/quickstart/credentials">
+  Comece criando sua chave de API e configurando os escopos necessários para a integração.
+</Card>

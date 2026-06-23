@@ -1,0 +1,47 @@
+---
+title: "Enriquecimentos"
+description: "Erros relacionados ao acesso, configuração, cobrança e processamento de enriquecimentos."
+keywords: ["erro enriquecimento", "processamento em massa", "datasets enriquecimento", "códigos de erro lazy data"]
+sidebarTitle: "Enriquecimentos"
+---
+
+Os erros de enriquecimento seguem o padrão geral de resposta da Lazy Data:
+
+```json
+{
+  "code": 42011,
+  "message": "Não foi possível reservar o valor do enriquecimento."
+}
+```
+
+## Acesso e permissões
+
+| Código | Mensagem |
+| --- | --- |
+| `42001` | Não foi possível identificar um plano válido para a conta. |
+| `42002` | A funcionalidade de enriquecimento não está habilitada para a conta atual. |
+| `41007` | A subconta não possui permissão para acessar este recurso. |
+| `41008` | A subconta atingiu o limite mensal configurado. |
+| `44001` | A conta possui fatura pós-paga em atraso. |
+
+## Cobrança
+
+| Código | Mensagem |
+| --- | --- |
+| `42011` | Não foi possível reservar o valor do enriquecimento. Verifique saldo disponível ou limite mensal. |
+
+## Datasets
+
+| Código | Mensagem |
+| --- | --- |
+| `42007` | Um ou mais datasets selecionados não foram encontrados. |
+| `42008` | Um ou mais datasets selecionados estão inativos. |
+| `42015` | Não foi possível executar um dataset durante o enriquecimento. |
+
+## Enriquecimento
+
+| Código | Mensagem |
+| --- | --- |
+| `404` | O enriquecimento solicitado não foi encontrado. |
+| `409` | O enriquecimento não está disponível para a ação solicitada. |
+| `500` | Não foi possível processar o enriquecimento. |

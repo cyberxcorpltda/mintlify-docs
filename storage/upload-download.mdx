@@ -1,0 +1,462 @@
+---
+title: "Upload e download"
+description: "Entenda como enviar e baixar arquivos no armazenamento da Lazy Data."
+sidebarTitle: "Upload e download"
+keywords: ["upload", "download", "armazenamento", "arquivos", "assinatura de upload", "lazy data"]
+---
+
+A área de armazenamento permite enviar arquivos para a conta e baixá-los posteriormente pelo painel ou pela API.
+
+Os uploads são realizados com assinatura temporária, garantindo que cada envio seja autorizado antes de o arquivo ser armazenado.
+
+<Card title="Upload para armazenamento" icon="cloud-arrow-up" horizontal href="/api-reference/upload/storage">
+  Envie arquivos para `upload.lazydata.com.br/storage` usando a assinatura temporária.
+</Card>
+
+## Upload de arquivos
+
+Para enviar um arquivo pelo painel:
+
+1. Acesse **Armazenamento**.
+2. Navegue até a pasta desejada.
+3. Clique em **Enviar arquivo**.
+4. Selecione o arquivo.
+5. Aguarde o envio e o processamento.
+6. O arquivo será exibido na pasta atual.
+
+Pela API, o fluxo é dividido em duas chamadas:
+
+```text
+POST /v1/storage/uploads
+POST https://upload.lazydata.com.br/storage
+```
+
+<Warning>
+  O arquivo binário não deve ser enviado para a URL base da API principal. O envio do arquivo usa o serviço `https://upload.lazydata.com.br/storage`.
+</Warning>
+
+## Limite por arquivo
+
+Cada arquivo pode ter até `1024 MB`.
+
+Arquivos acima desse limite são recusados antes do armazenamento.
+
+Também é necessário que a conta tenha espaço disponível suficiente para o arquivo.
+
+## Preparar upload
+
+Antes de enviar o arquivo, a Lazy Data gera uma assinatura temporária de upload.
+
+Essa etapa cria o registro inicial do arquivo com status `waiting_upload`.
+
+```json
+{
+  "name": "contrato.pdf",
+  "parent_id": null
+}
+```
+
+A resposta retorna:
+
+```json
+{
+  "upload_url": "https://upload.lazydata.com.br/storage",
+  "signature": "<assinatura_de_upload>",
+  "signature_expires_at": "2026-06-22T14:00:00+00:00",
+  "max_size": 1073741824,
+  "file": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "name": "contrato.pdf",
+    "status": "waiting_upload"
+  }
+}
+```
+
+<Card title="Preparar upload" icon="file-arrow-up" horizontal href="/api-reference/storage/prepare-upload">
+  Gere a assinatura temporária e o registro inicial do arquivo.
+</Card>
+
+## Assinatura de upload
+
+A assinatura temporária valida:
+
+- conta responsável pelo envio;
+- arquivo preparado;
+- nome esperado do arquivo;
+- pasta de destino;
+- validade da autorização;
+- permissão para armazenar o arquivo.
+
+A assinatura deve ser enviada no header:
+
+```http
+X-LazyData-Upload-Signature: <assinatura_de_upload>
+```
+
+<Warning>
+  A assinatura é temporária e deve ser usada apenas para o arquivo preparado. Se expirar ou o upload falhar, gere uma nova assinatura.
+</Warning>
+
+## Enviar arquivo
+
+Depois de preparar o upload, envie o arquivo em `multipart/form-data`.
+
+O campo do arquivo deve se chamar exatamente `file`.
+
+```bash
+curl --request POST \
+  --url "https://upload.lazydata.com.br/storage" \
+  --header "X-LazyData-Upload-Signature: <assinatura_de_upload>" \
+  --form "file=@./contrato.pdf"
+```
+
+Exemplo com JavaScript:
+
+```javascript
+const formData = new FormData();
+formData.append("file", file, file.name);
+
+const response = await fetch("https://upload.lazydata.com.br/storage", {
+  method: "POST",
+  headers: {
+    "X-LazyData-Upload-Signature": uploadSignature
+  },
+  body: formData
+});
+
+const data = await response.json();
+```
+
+<Note>
+  Não defina manualmente o header `Content-Type` ao usar `FormData` no navegador. O navegador adiciona o boundary correto do `multipart/form-data`.
+</Note>
+
+## Processamento após upload
+
+Após o envio, a plataforma registra informações do arquivo:
+
+- nome;
+- extensão;
+- tipo de conteúdo;
+- tamanho;
+- data do upload;
+- pasta de destino;
+- identificador interno;
+- status final.
+
+Depois disso, o arquivo aparece na listagem da pasta com status `uploaded`.
+
+## Tipos de arquivo
+
+O armazenamento aceita diferentes tipos de arquivos, desde que respeitem limite de tamanho, cota da conta e regras de segurança.
+
+A visualização pode exibir ícones específicos conforme tipo ou extensão.
+
+| Tipo | Extensões comuns |
+| --- | --- |
+| Imagens | `.jpg`, `.jpeg`, `.png`, `.webp` |
+| PDFs | `.pdf` |
+| Planilhas | `.csv`, `.xls`, `.xlsx` |
+| Documentos | `.doc`, `.docx`, `.txt` |
+| Arquivos compactados | `.zip`, `.rar`, `.7z` |
+| Genéricos | Outros formatos permitidos |
+
+## Status de upload
+
+| Status | Descrição |
+| --- | --- |
+| `waiting_upload` | Registro criado e aguardando envio. |
+| `receiving_upload` | Upload em andamento. |
+| `uploaded` | Arquivo recebido e salvo com sucesso. |
+| `failed` | Upload falhou ou foi recusado. |
+
+## Falhas no upload
+
+Se o upload falhar, o arquivo pode não aparecer na pasta ou pode ficar com status de falha.
+
+Possíveis causas:
+
+- arquivo acima do limite permitido;
+- assinatura ausente, inválida ou expirada;
+- nome do arquivo diferente do nome assinado;
+- conexão interrompida;
+- pasta de destino indisponível;
+- espaço insuficiente na conta;
+- upload já enviado para o registro preparado.
+
+<Warning>
+  Não reutilize uma assinatura expirada ou já usada. Gere uma nova assinatura antes de tentar novamente.
+</Warning>
+
+## Download de arquivos
+
+Para baixar um arquivo pelo painel:
+
+1. Acesse a pasta onde o arquivo está salvo.
+2. Clique no ícone de download.
+3. Aguarde a geração do link.
+4. Use o link temporário para baixar o arquivo.
+
+Pela API, gere um link temporário:
+
+```text
+GET /v1/storage/files/{file_id}/download
+```
+
+<Card title="Gerar download" icon="download" horizontal href="/api-reference/storage/download-file">
+  Gere um link temporário para baixar um arquivo armazenado.
+</Card>
+
+## Resposta do download
+
+A resposta retorna o link temporário e os metadados do arquivo.
+
+```json
+{
+  "url": "https://s3.amazonaws.com/exemplo-assinado",
+  "file_name": "contrato.pdf",
+  "file": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "type": "file",
+    "name": "contrato.pdf",
+    "status": "uploaded"
+  }
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `url` | Link temporário para download. |
+| `file_name` | Nome sugerido do arquivo. |
+| `file` | Metadados do arquivo armazenado. |
+
+<Warning>
+  Não armazene links temporários como referência permanente. Gere um novo link sempre que precisar baixar o arquivo.
+</Warning>
+
+## Segurança no download
+
+O download valida se a credencial ou sessão possui acesso ao arquivo antes de liberar o link.
+
+Arquivos de uma conta não ficam disponíveis para outras contas.
+
+O link retornado é temporário e deve ser tratado como sensível enquanto estiver válido.
+
+## Arquivos grandes
+
+Arquivos grandes podem levar mais tempo para upload ou download, dependendo da conexão.
+
+Para arquivos próximos ao limite de `1024 MB`, recomenda-se:
+
+- manter a página aberta durante o envio;
+- evitar atualizar a tela durante o upload;
+- usar uma conexão estável;
+- confirmar se há espaço disponível antes do envio;
+- gerar nova assinatura caso o upload demore além da validade da assinatura anterior.
+
+## Boas práticas
+
+- Use nomes de arquivo claros.
+- Evite caracteres incomuns em nomes de arquivo.
+- Organize arquivos em pastas antes de enviar grandes volumes.
+- Remova arquivos antigos quando não forem mais necessários.
+- Verifique `summary.available_bytes` antes de uploads grandes.
+- Não exponha assinaturas de upload ou links temporários em logs públicos.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Permissões e limites" icon="shield-check" href="/storage/permissions-limits">
+    Consulte regras de acesso, limite por arquivo e espaço disponível.
+  </Card>
+
+  <Card title="Pastas e arquivos" icon="folder-tree" href="/storage/files-and-folders">
+    Veja como organizar, navegar e renomear itens.
+  </Card>
+
+  <Card title="Preparar upload" icon="file-arrow-up" href="/api-reference/storage/prepare-upload">
+    Gere assinatura temporária para envio.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/upload">
+    Consulte erros de assinatura, arquivo, cota e envio.
+  </Card>
+</Columns>
+
+A assinatura temporária valida:
+
+- conta responsável pelo envio;
+- arquivo preparado;
+- nome esperado do arquivo;
+- pasta de destino;
+- validade da autorização;
+- permissão para armazenar o arquivo.
+
+A assinatura deve ser enviada no header:
+
+```http
+X-LazyData-Upload-Signature: <assinatura_de_upload>
+```
+
+<Warning>
+  A assinatura é temporária e deve ser usada apenas para o arquivo preparado. Se expirar ou o upload falhar, gere uma nova assinatura.
+</Warning>
+
+## Enviar arquivo
+
+Depois de preparar o upload, envie o arquivo em `multipart/form-data`.
+
+O campo do arquivo deve se chamar exatamente `file`.
+
+```bash
+curl --request POST \
+  --url "https://upload.lazydata.com.br/storage" \
+  --header "X-LazyData-Upload-Signature: <assinatura_de_upload>" \
+  --form "file=@./contrato.pdf"
+```
+
+Exemplo com JavaScript:
+
+```javascript
+const formData = new FormData();
+formData.append("file", file, file.name);
+
+const response = await fetch("https://upload.lazydata.com.br/storage", {
+  method: "POST",
+  headers: {
+    "X-LazyData-Upload-Signature": uploadSignature
+  },
+  body: formData
+});
+
+const data = await response.json();
+```
+
+<Note>
+  Não defina manualmente o header `Content-Type` ao usar `FormData` no navegador. O navegador adiciona o boundary correto do `multipart/form-data`.
+</Note>
+
+Após o envio, a plataforma registra informações do arquivo:
+
+- nome;
+- extensão;
+- tipo de conteúdo;
+- tamanho;
+- data do upload;
+- pasta de destino;
+- identificador interno;
+- status final.
+
+Depois disso, o arquivo aparece na listagem da pasta com status `uploaded`.
+
+O armazenamento aceita diferentes tipos de arquivos, desde que respeitem limite de tamanho, cota da conta e regras de segurança.
+
+A visualização pode exibir ícones específicos conforme tipo ou extensão.
+
+## Status de upload
+
+| Status | Descrição |
+| --- | --- |
+| `waiting_upload` | Registro criado e aguardando envio. |
+| `receiving_upload` | Upload em andamento. |
+| `uploaded` | Arquivo recebido e salvo com sucesso. |
+| `failed` | Upload falhou ou foi recusado. |
+
+## Falhas no upload
+
+Se o upload falhar, o arquivo pode não aparecer na pasta ou pode ficar com status de falha.
+
+Possíveis causas:
+
+- arquivo acima do limite permitido;
+- assinatura ausente, inválida ou expirada;
+- nome do arquivo diferente do nome assinado;
+- conexão interrompida;
+- pasta de destino indisponível;
+- espaço insuficiente na conta;
+- upload já enviado para o registro preparado.
+
+<Warning>
+  Não reutilize uma assinatura expirada ou já usada. Gere uma nova assinatura antes de tentar novamente.
+</Warning>
+
+Para baixar um arquivo pelo painel:
+
+1. Acesse a pasta onde o arquivo está salvo.
+2. Clique no ícone de download.
+3. Aguarde a geração do link.
+4. Use o link temporário para baixar o arquivo.
+
+Pela API, gere um link temporário:
+
+```text
+GET /v1/storage/files/{file_id}/download
+```
+
+<Card title="Gerar download" icon="download" horizontal href="/api-reference/storage/download-file">
+  Gere um link temporário para baixar um arquivo armazenado.
+</Card>
+
+## Resposta do download
+
+A resposta retorna o link temporário e os metadados do arquivo.
+
+```json
+{
+  "url": "https://s3.amazonaws.com/exemplo-assinado",
+  "file_name": "contrato.pdf",
+  "file": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "type": "file",
+    "name": "contrato.pdf",
+    "status": "uploaded"
+  }
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `url` | Link temporário para download. |
+| `file_name` | Nome sugerido do arquivo. |
+| `file` | Metadados do arquivo armazenado. |
+
+<Warning>
+  Não armazene links temporários como referência permanente. Gere um novo link sempre que precisar baixar o arquivo.
+</Warning>
+
+O download valida se a credencial ou sessão possui acesso ao arquivo antes de liberar o link.
+
+O link retornado é temporário e deve ser tratado como sensível enquanto estiver válido.
+
+Para arquivos próximos ao limite de `1024 MB`, recomenda-se:
+
+- manter a página aberta durante o envio;
+- evitar atualizar a tela durante o upload;
+- usar uma conexão estável;
+- confirmar se há espaço disponível antes do envio;
+- gerar nova assinatura caso o upload demore além da validade da assinatura anterior.
+
+- Use nomes de arquivo claros.
+- Evite caracteres incomuns em nomes de arquivo.
+- Organize arquivos em pastas antes de enviar grandes volumes.
+- Remova arquivos antigos quando não forem mais necessários.
+- Verifique `summary.available_bytes` antes de uploads grandes.
+- Não exponha assinaturas de upload ou links temporários em logs públicos.
+
+<Columns cols={2}>
+  <Card title="Permissões e limites" icon="shield-check" href="/storage/permissions-limits">
+    Consulte regras de acesso, limite por arquivo e espaço disponível.
+  </Card>
+
+  <Card title="Pastas e arquivos" icon="folder-tree" href="/storage/files-and-folders">
+    Veja como organizar, navegar e renomear itens.
+  </Card>
+
+  <Card title="Preparar upload" icon="file-arrow-up" href="/api-reference/storage/prepare-upload">
+    Gere assinatura temporária para envio.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/upload">
+    Consulte erros de assinatura, arquivo, cota e envio.
+  </Card>
+</Columns>

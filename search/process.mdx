@@ -1,0 +1,227 @@
+---
+title: "Processos"
+keywords: ["consulta processual", "processos judiciais", "cpf processos", "cnpj processos", "datasets processuais", "lazy data"]
+description: "Consulte processos judiciais vinculados a CPF ou CNPJ usando datasets processuais da Lazy Data."
+sidebarTitle: "Processos"
+---
+
+A consulta de **processos** permite buscar processos judiciais vinculados a um CPF ou CNPJ em datasets processuais disponíveis para a conta.
+
+Use esta funcionalidade para análise jurídica, compliance, risco, prevenção à fraude, auditoria e verificação de vínculos processuais.
+
+## Forma de consulta
+
+<Card title="Busca por CPF/CNPJ" icon="gavel" horizontal href="/api-reference/search/process/by-taxid">
+  Inicie uma consulta processual por documento nos datasets selecionados.
+</Card>
+
+## Endpoints disponíveis
+
+| Recurso | Método | Endpoint | Uso principal |
+| --- | --- | --- | --- |
+| Busca por CPF/CNPJ | `POST` | `/v1/search/process` | Inicia consulta processual por CPF ou CNPJ. |
+| Datasets e preços | `GET` | `/v1/search/datasets/process` | Lista datasets processuais disponíveis, preço aplicado e estrutura de retorno. |
+| Resultado assíncrono | `GET` | `/v1/search/process/{id}` | Consulta o andamento e o resultado final da busca processual. |
+
+## Consulta processual
+
+A consulta processual usa o campo `taxid` como identificador e executa um ou mais datasets informados em `datasets`.
+
+```json
+{
+  "taxid": "00000000000",
+  "datasets": ["process_cnj_pje"],
+  "additional": {}
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+| --- | --- | --- | --- |
+| `taxid` | `string` | Sim | CPF ou CNPJ consultado. Pode ser enviado com ou sem pontuação. |
+| `datasets` | `array<string>` | Sim | Lista de IDs dos datasets processuais que serão consultados. |
+| `additional` | `object` | Não | Dados adicionais por dataset, quando algum dataset exigir parâmetros extras. |
+
+<Note>
+  Liste os datasets disponíveis em [Datasets e preços](/api-reference/search/datasets) usando `target: process`.
+</Note>
+
+## Execução assíncrona
+
+Consultas processuais são sempre executadas de forma assíncrona.
+
+Ao iniciar a consulta, a API registra o processamento e retorna um `id` para acompanhamento posterior.
+
+```json
+{
+  "code": 202,
+  "message": "Consulta iniciada com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "queued",
+    "status_values": ["queued", "processing", "completed", "failed"],
+    "datasets": ["process_cnj_pje"]
+  }
+}
+```
+
+<Info>
+  Consultas processuais podem envolver múltiplas fontes, provedores externos e tempos de resposta maiores. Por isso, o processamento é sempre assíncrono.
+</Info>
+
+## Status possíveis
+
+| Status | Descrição |
+| --- | --- |
+| `queued` | Consulta criada e aguardando processamento. |
+| `processing` | Consulta em processamento. |
+| `completed` | Consulta finalizada. Verifique o resultado, erros e status por dataset. |
+| `failed` | Consulta finalizada com falha geral. |
+
+Para consultar o resultado final, use o endpoint de [resultado assíncrono](/api-reference/search/async-result) com `target: process`.
+
+## Datasets processuais
+
+Os datasets processuais disponíveis podem variar conforme plano, permissões e configuração comercial da conta.
+
+Cada dataset representa uma fonte, tribunal, sistema ou agregador processual.
+
+<Card title="Datasets e preços" icon="database" horizontal href="/api-reference/search/datasets">
+  Consulte os datasets processuais disponíveis usando `target: process`.
+</Card>
+
+<Warning>
+  A ausência de processos em um dataset não significa ausência em todas as fontes. Consulte os datasets adequados ao seu fluxo de risco ou compliance.
+</Warning>
+
+## Dados adicionais por dataset
+
+Alguns datasets processuais podem exigir parâmetros complementares. Esses campos aparecem em `additional_fields` no endpoint de [Datasets e preços](/api-reference/search/datasets).
+
+Quando exigidos, envie os dados em `additional`, usando o ID do dataset como chave:
+
+```json
+{
+  "taxid": "00000000000000",
+  "datasets": ["process_example_dataset"],
+  "additional": {
+    "process_example_dataset": {
+      "state": "SP"
+    }
+  }
+}
+```
+
+<Info>
+  O dataset acima é fictício e serve apenas para demonstrar a estrutura de envio de dados adicionais.
+</Info>
+
+## Resultado final
+
+Depois que a consulta for finalizada, o endpoint de resultado assíncrono retorna a estrutura completa da busca.
+
+```json
+{
+  "code": 200,
+  "message": "Consulta realizada com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "completed",
+    "target": "process",
+    "query": {
+      "taxid": "00000000000",
+      "datasets": ["process_cnj_pje"],
+      "additional": {}
+    },
+    "cost": {
+      "total": 0.35,
+      "refunded": 0,
+      "datasets": {
+        "process_cnj_pje": {
+          "charged": 0.35,
+          "refunded": 0
+        }
+      }
+    },
+    "timing": {
+      "total": 3.91,
+      "datasets": {
+        "process_cnj_pje": 3.42
+      }
+    },
+    "errors": {},
+    "datasets_status": {
+      "process_cnj_pje": "completed"
+    },
+    "result": {
+      "process_cnj_pje": [
+        {
+          "process_number": "0000000-00.2026.8.00.0000",
+          "court": "TRIBUNAL EXEMPLO",
+          "subject": "Consulta processual",
+          "filing_date": "2026-06-21"
+        }
+      ]
+    },
+    "created_at": "2026-06-22T12:00:00Z",
+    "last_updated_at": "2026-06-22T12:00:04Z"
+  }
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `query` | Documento, datasets e campos adicionais usados na consulta. |
+| `cost` | Valores debitados e estornados por dataset. |
+| `timing` | Tempo total e tempo individual por dataset, quando disponível. |
+| `errors` | Erros por dataset, quando ocorrerem. |
+| `datasets_status` | Status individual de cada dataset consultado. |
+| `result` | Dados retornados por cada dataset processual. |
+
+<Warning>
+  Campos descritos na estrutura dos datasets podem não aparecer em todas as consultas. A disponibilidade depende da fonte, do documento consultado e do dataset selecionado.
+</Warning>
+
+## Ambiente de teste
+
+A consulta processual tem suporte ao ambiente de teste.
+
+Para executar uma chamada sem consumo de saldo, envie o header:
+
+```http
+x-ambient: sandbox
+```
+
+<Card title="Ambiente de teste" icon="flask" horizontal href="/quickstart/sandbox">
+  Veja como usar o header de sandbox e validar integrações sem consumir saldo.
+</Card>
+
+## Regras importantes
+
+- O documento informado deve ser um CPF ou CNPJ válido.
+- A consulta processual não recebe `mode`, porque sempre é assíncrona.
+- Campos fora do schema documentado são rejeitados pela validação da API.
+- Datasets indisponíveis, inativos ou não permitidos para a conta podem retornar erro.
+- Consultas com múltiplos datasets podem retornar resultados parciais caso algum dataset falhe.
+- A cobrança é calculada com base nos datasets efetivamente executados, conforme as regras comerciais da conta.
+- Uma mesma pessoa ou empresa pode possuir processos em múltiplas fontes.
+- Alguns campos processuais podem estar ausentes por limitação da fonte, indisponibilidade temporária ou diferença entre sistemas processuais.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Busca por CPF/CNPJ" icon="gavel" href="/api-reference/search/process/by-taxid">
+    Veja os parâmetros e respostas da consulta processual.
+  </Card>
+
+  <Card title="Resultado assíncrono" icon="clock" href="/api-reference/search/async-result">
+    Consulte o andamento e o resultado final de uma consulta processual.
+  </Card>
+
+  <Card title="Datasets e preços" icon="database" href="/api-reference/search/datasets">
+    Liste os datasets processuais disponíveis e os preços aplicados.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/search">
+    Consulte os erros relacionados a consultas.
+  </Card>
+</Columns>

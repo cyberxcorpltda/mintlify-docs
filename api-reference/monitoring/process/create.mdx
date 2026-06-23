@@ -1,0 +1,95 @@
+---
+title: "Criar monitoramento"
+keywords: ["criar monitoramento processo", "court_code", "datajud", "alerta processo"]
+description: "Crie um monitoramento para um processo em um tribunal específico."
+sidebarTitle: "Criar"
+api: "POST /v1/monitoring/process"
+playground: "interactive"
+---
+
+Cria um monitoramento processual para o número e tribunal informados.
+
+O campo `court_code` é obrigatório porque um mesmo número deve ser validado contra o tribunal correto.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Monitoramento criado com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "name": "Processo cliente exemplo",
+    "type": "process",
+    "status": "active",
+    "status_label": "Ativo",
+    "notification_email": "alertas@example.com",
+    "price_per_check": 0.03,
+    "checks_count": 1,
+    "events_count": 1,
+    "charged_total": 0.03,
+    "target": {
+      "type": "process",
+      "process_number": "0000001-77.2026.8.26.0000",
+      "court_code": "tjsp",
+      "court_acronym": "TJSP"
+    },
+    "frequency": "Diário",
+    "initial_email_sent": true
+  }
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "Já existe um monitoramento para este processo e tribunal.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "active"
+  }
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="process_number" type="string" required>
+  Número do processo no padrão CNJ.
+</ParamField>
+
+<ParamField body="court_code" type="string" required placeholder="tjsp">
+  Sigla/código público do tribunal DataJud, como `tjsp`, `tjba`, `trf1`, `tst` ou `stj`.
+</ParamField>
+
+<ParamField body="name" type="string">
+  Nome interno do monitoramento.
+</ParamField>
+
+<ParamField body="frequency_id" type="string" required placeholder="daily">
+  ID da frequência retornada em [Configuração](/api-reference/monitoring/process/config).
+</ParamField>
+
+<ParamField body="notification_email" type="string" required>
+  E-mail que receberá os alertas do monitoramento.
+</ParamField>
+
+## Exemplo de corpo
+
+```json
+{
+  "process_number": "0000001-77.2026.8.26.0000",
+  "court_code": "tjsp",
+  "name": "Processo cliente exemplo",
+  "frequency_id": "daily",
+  "notification_email": "alertas@example.com"
+}
+```
+
+## Fluxo recomendado
+
+1. Use [Detectar tribunal](/api-reference/monitoring/process/detect-court) para obter `court_code`.
+2. Use [Validar processo](/api-reference/monitoring/process/validate) para confirmar que o processo foi encontrado no tribunal.
+3. Crie o monitoramento com a frequência desejada.
+4. Acompanhe eventos em [Detalhar monitoramento](/api-reference/monitoring/detail).

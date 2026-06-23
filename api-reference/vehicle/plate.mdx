@@ -1,0 +1,337 @@
+---
+title: "Busca por placa"
+description: "Execute consultas veiculares por placa nos datasets selecionados."
+sidebarTitle: "Busca por placa"
+api: "POST /v1/search/vehicle"
+playground: "interactive"
+---
+
+Executa uma consulta veicular usando a placa informada e os datasets selecionados.
+
+A consulta aceita placas no formato antigo e no padrão Mercosul. Pontuação, espaços e hífen são removidos automaticamente antes da validação.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Consulta realizada com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "completed",
+    "target": "vehicle",
+    "query": {
+      "plate": "ABC0A00",
+      "datasets": ["vehicle_basic_data"],
+      "additional": {}
+    },
+    "cost": {
+      "total": 0.12,
+      "refunded": 0,
+      "datasets": {
+        "vehicle_basic_data": {
+          "charged": 0.12,
+          "refunded": 0
+        }
+      }
+    },
+    "timing": {
+      "total": 1.84,
+      "datasets": {
+        "vehicle_basic_data": 1.84
+      }
+    },
+    "errors": {},
+    "datasets_status": {
+      "vehicle_basic_data": "completed"
+    },
+    "result": {
+      "vehicle_basic_data": {
+        "plate": "ABC0A00",
+        "state": "SP",
+        "city": "São Paulo",
+        "brand": "MARCA EXEMPLO",
+        "model": "MODELO EXEMPLO",
+        "manufacture_year": "2020",
+        "model_year": "2021",
+        "fuel": "FLEX",
+        "color": "PRATA",
+        "vehicle_type": "AUTOMÓVEL",
+        "status": "EM CIRCULACAO"
+      }
+    },
+    "created_at": "2026-06-22T12:00:00Z",
+    "last_updated_at": "2026-06-22T12:00:02Z"
+  }
+}
+```
+
+```json 202
+{
+  "code": 202,
+  "message": "Consulta iniciada com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "queued",
+    "status_values": ["queued", "processing", "completed", "failed"],
+    "datasets": ["vehicle_basic_data"]
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Um ou mais parâmetros informados são inválidos."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="plate" type="string" required placeholder="ABC0A00">
+  Placa do veículo. Aceita formato antigo e Mercosul.
+</ParamField>
+
+<ParamField body="datasets" type="string[]" required>
+  Lista de IDs dos datasets veiculares que serão consultados.
+</ParamField>
+
+<ParamField body="additional" type="object">
+  Dados adicionais por dataset, quando algum dataset exigir parâmetros extras.
+</ParamField>
+
+<ParamField body="mode" default="async" type="string" placeholder="async">
+  Modo da consulta.
+</ParamField>
+
+Valores aceitos para `mode`:
+
+| Valor | Descrição |
+| --- | --- |
+| `async` | Inicia a consulta e retorna um `id` para acompanhar o resultado depois. |
+| `sync` | Aguarda a conclusão da consulta e retorna os dados diretamente na resposta. |
+
+<ParamField header="x-ambient" type="string" placeholder="sandbox">
+  Use `sandbox` para executar uma chamada de teste sem consumo de saldo.
+</ParamField>
+
+<Note>
+  Para detalhes sobre chamadas de teste, consulte [Ambiente de teste](/quickstart/sandbox).
+</Note>
+
+## Exemplo de corpo
+
+```json
+{
+  "plate": "ABC0A00",
+  "mode": "async",
+  "datasets": ["vehicle_basic_data"],
+  "additional": {}
+}
+```
+
+<Warning>
+  A placa acima é fictícia e serve apenas para demonstrar a estrutura da requisição. Em chamadas reais ou sandbox, informe uma placa válida para o ambiente utilizado.
+</Warning>
+
+## Regras da placa
+
+O campo `plate` aceita os dois padrões principais de placas brasileiras:
+
+| Formato | Exemplo estrutural | Descrição |
+| --- | --- | --- |
+| Antigo | `ABC1234` | Três letras seguidas de quatro números. |
+| Mercosul | `ABC1D23` | Três letras, um número, uma letra e dois números. |
+
+A API normaliza o valor recebido antes da consulta, removendo hífen, espaços e pontuação.
+
+## Datasets veiculares
+
+Antes de iniciar a consulta, liste os datasets disponíveis em [Datasets e preços](/api-reference/search/datasets) usando o tipo `vehicle`.
+
+Use apenas datasets com `active: true`.
+
+## Parâmetros adicionais por dataset
+
+Alguns datasets podem exigir campos adicionais. Consulte `additional_fields` no endpoint de datasets e preços para saber quais campos devem ser enviados.
+
+Exemplo de envio de dados adicionais:
+
+```json
+{
+  "plate": "ABC0A00",
+  "mode": "async",
+  "datasets": ["vehicle_example_dataset"],
+  "additional": {
+    "vehicle_example_dataset": {
+      "state": "SP"
+    }
+  }
+}
+```
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta da API.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da resposta.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Objeto principal da consulta. A estrutura varia de acordo com o modo de execução.
+</ResponseField>
+
+## Retorno síncrono
+
+Quando `mode` é `sync`, a resposta pode retornar `code: 200` com os dados completos da consulta.
+
+### Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador único da consulta. |
+| `status` | `string` | Status final da consulta. Normalmente `completed`. |
+| `target` | `string` | Tipo da consulta. Para esta rota, retorna `vehicle`. |
+| `query` | `object` | Dados usados na consulta. |
+| `cost` | `object` | Valores cobrados e estornados. |
+| `timing` | `object` | Tempo total e tempo individual por dataset. |
+| `errors` | `object` | Erros por dataset, quando ocorrerem. |
+| `datasets_status` | `object` | Status individual de cada dataset. |
+| `result` | `object` | Resultado agrupado por dataset. |
+| `created_at` | `string` | Data de criação da consulta em ISO 8601. |
+| `last_updated_at` | `string` | Data da última atualização da consulta em ISO 8601. |
+
+### Estrutura de `result.query`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `plate` | `string` | Placa consultada, normalizada sem pontuação. |
+| `datasets` | `array<string>` | Datasets solicitados. |
+| `additional` | `object` | Dados adicionais enviados por dataset. |
+
+### Estrutura de `result.cost`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `total` | `number` | Valor total debitado após regras de retorno e estorno. |
+| `refunded` | `number` | Valor total estornado. |
+| `datasets` | `object` | Detalhamento de cobrança por dataset. |
+
+### Estrutura de `result.timing`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `total` | `number` | Tempo total da consulta em segundos. |
+| `datasets` | `object` | Tempo individual de cada dataset em segundos. |
+
+### Estrutura de `result.errors`
+
+O campo `errors` retorna um objeto indexado pelo ID do dataset quando alguma base falha.
+
+```json
+{
+  "errors": {
+    "vehicle_example_dataset": {
+      "code": 42025,
+      "message": "Não foi possível consultar o provedor da consulta."
+    }
+  }
+}
+```
+
+### Estrutura de `result.datasets_status`
+
+Objeto com o status individual de cada dataset.
+
+```json
+{
+  "datasets_status": {
+    "vehicle_basic_data": "completed",
+    "vehicle_example_dataset": "failed"
+  }
+}
+```
+
+### Estrutura de `result.result`
+
+Objeto indexado pelo ID do dataset. Cada chave contém o retorno do dataset correspondente.
+
+```json
+{
+  "result": {
+    "vehicle_basic_data": {
+      "plate": "ABC0A00",
+      "state": "SP",
+      "brand": "MARCA EXEMPLO",
+      "model": "MODELO EXEMPLO"
+    }
+  }
+}
+```
+
+<Warning>
+  Campos descritos na estrutura do dataset podem não ser retornados em todas as consultas. Alguns dados dependem da disponibilidade da fonte e da placa consultada.
+</Warning>
+
+## Retorno assíncrono
+
+Quando `mode` é `async`, a resposta inicial retorna `code: 202` e o processamento continua em segundo plano.
+
+### Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador da consulta assíncrona. |
+| `status` | `string` | Status atual da consulta. |
+| `status_values` | `array<string>` | Lista de status possíveis. |
+| `datasets` | `array<string>` | Datasets solicitados na consulta. |
+
+Status possíveis:
+
+| Status | Descrição |
+| --- | --- |
+| `queued` | Consulta criada e aguardando processamento. |
+| `processing` | Consulta em processamento. |
+| `completed` | Consulta finalizada. Verifique o resultado, erros e status por dataset no endpoint de resultado. |
+| `failed` | Consulta finalizada com falha geral. |
+
+Para consultar o resultado final, use o `id` retornado no endpoint de [resultado assíncrono](/api-reference/search/async-result) com `target: vehicle`.
+
+## Respostas esperadas
+
+As respostas possíveis estão exemplificadas no painel lateral da página.
+
+| Status | Quando ocorre |
+| --- | --- |
+| `200` | Consulta síncrona concluída com sucesso. |
+| `202` | Consulta assíncrona iniciada com sucesso. |
+| `400` | Requisição inválida, placa inválida, dataset ausente ou parâmetro incompatível. |
+| `401` | A chave da API está ausente, inválida ou não pôde ser autenticada. |
+| `403` | A credencial não possui escopo de consulta, o plano não permite acesso ou há bloqueio financeiro. |
+
+## Fluxo recomendado
+
+1. Liste os datasets disponíveis em [Datasets e preços](/api-reference/search/datasets) usando `target: vehicle`.
+2. Selecione apenas datasets veiculares ativos.
+3. Envie a placa, os datasets e os campos adicionais necessários.
+4. Use `mode: "async"` para iniciar a consulta e acompanhar o resultado depois.
+5. Consulte o resultado em [Resultado assíncrono](/api-reference/search/async-result) usando `target: vehicle`.

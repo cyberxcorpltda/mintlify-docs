@@ -1,0 +1,243 @@
+---
+title: "Permissões e limites"
+description: "Entenda as regras de acesso, tamanho máximo e limites do armazenamento."
+sidebarTitle: "Permissões e limites"
+keywords: ["permissões armazenamento", "limite armazenamento", "limite upload", "arquivos", "subcontas", "lazy data"]
+---
+
+O armazenamento possui regras de acesso e limites para garantir organização, segurança e controle de uso da conta.
+
+Cada conta possui um espaço disponível, e cada arquivo enviado precisa respeitar o limite máximo por arquivo, a cota da conta e as permissões do usuário ou credencial usada na operação.
+
+<Card title="Listar uso do armazenamento" icon="chart-pie" horizontal href="/api-reference/storage/list-items">
+  Consulte `summary.used_bytes`, `summary.available_bytes`, cota total e itens armazenados.
+</Card>
+
+## Quem pode acessar
+
+O acesso ao armazenamento depende do plano, das permissões da conta e do escopo da credencial usada.
+
+| Acesso | Regra |
+| --- | --- |
+| Conta principal | Pode acessar o armazenamento quando o plano ou configuração da conta habilitar o recurso. |
+| Usuários do painel | Podem visualizar e gerenciar arquivos conforme permissões concedidas no painel. |
+| Credenciais da API | Precisam ter permissão para o recurso de armazenamento, normalmente pelo escopo `storage`. |
+| Subcontas | Precisam ter acesso ao armazenamento habilitado pela conta principal. |
+
+<Warning>
+  Habilite armazenamento para subcontas apenas quando elas realmente precisarem visualizar, enviar, renomear ou excluir arquivos da conta.
+</Warning>
+
+## Isolamento entre contas
+
+Arquivos de uma conta não são compartilhados com outras contas.
+
+Operações como listagem, criação de pasta, preparação de upload, download, renomeação e exclusão validam a conta responsável antes de executar a ação.
+
+## Limite por arquivo
+
+Cada arquivo enviado ao armazenamento pode ter até `1024 MB`.
+
+```text
+Limite por arquivo: 1024 MB
+```
+
+Arquivos acima desse limite são recusados antes de serem armazenados.
+
+Na preparação do upload, a API retorna o limite aplicável em `max_size`:
+
+```json
+{
+  "max_size": 1073741824
+}
+```
+
+<Note>
+  Mesmo que o arquivo esteja abaixo de `1024 MB`, o upload também depende do espaço disponível na conta.
+</Note>
+
+## Limite de armazenamento da conta
+
+O espaço total disponível depende do plano ou da configuração aplicada à conta.
+
+O uso atual aparece no objeto `summary` da listagem de itens.
+
+```json
+{
+  "summary": {
+    "used_bytes": 262144000,
+    "quota_bytes": 5368709120,
+    "available_bytes": 5106565120,
+    "usage_percent": 4.88,
+    "files": 42
+  }
+}
+```
+
+| Campo | Descrição |
+| --- | --- |
+| `used_bytes` | Espaço já utilizado pela conta. |
+| `quota_bytes` | Limite total configurado para armazenamento. |
+| `available_bytes` | Espaço ainda disponível para novos arquivos. |
+| `usage_percent` | Percentual de uso da cota. |
+| `files` | Quantidade de arquivos armazenados. |
+
+Use `summary.available_bytes` para validar uploads grandes antes de gerar uma assinatura.
+
+## Quando o limite é atingido
+
+Quando a conta atinge o limite de armazenamento, novos uploads podem ser bloqueados até que espaço seja liberado.
+
+Para liberar espaço:
+
+- exclua arquivos antigos;
+- remova pastas que não são mais necessárias;
+- baixe e arquive localmente documentos que não precisam ficar no painel;
+- revise arquivos duplicados;
+- acompanhe o uso por `summary` antes de novos envios.
+
+## Upload assinado
+
+Uploads para armazenamento usam assinatura temporária.
+
+O fluxo possui duas etapas:
+
+```text
+POST /v1/storage/uploads
+POST https://upload.lazydata.com.br/storage
+```
+
+A primeira chamada cria o registro inicial do arquivo e retorna `upload_url`, `signature`, `signature_expires_at` e `max_size`.
+
+A segunda chamada envia o arquivo para o serviço de upload:
+
+```http
+X-LazyData-Upload-Signature: <assinatura_de_upload>
+```
+
+<Warning>
+  O arquivo binário não deve ser enviado para a URL base da API principal. Use sempre `https://upload.lazydata.com.br/storage` para enviar o arquivo.
+</Warning>
+
+## Regras da assinatura
+
+A assinatura temporária valida:
+
+- conta responsável pelo envio;
+- arquivo preparado;
+- nome esperado do arquivo;
+- pasta de destino;
+- validade da autorização;
+- limite máximo permitido;
+- permissão para armazenar o arquivo.
+
+Se a assinatura expirar, for usada com outro arquivo ou o envio falhar, gere uma nova assinatura antes de tentar novamente.
+
+<Card title="Preparar upload" icon="file-arrow-up" horizontal href="/api-reference/storage/prepare-upload">
+  Gere assinatura temporária e registro inicial do arquivo.
+</Card>
+
+## Download seguro
+
+Downloads são feitos por links temporários gerados pela API.
+
+```text
+GET /v1/storage/files/{file_id}/download
+```
+
+A API valida se a credencial ou sessão possui acesso ao arquivo antes de liberar o link.
+
+O link retornado deve ser tratado como sensível enquanto estiver válido.
+
+<Warning>
+  Não armazene links temporários como referência permanente. Gere um novo link sempre que precisar baixar o arquivo.
+</Warning>
+
+<Card title="Gerar download" icon="download" horizontal href="/api-reference/storage/download-file">
+  Gere um link temporário para baixar um arquivo armazenado.
+</Card>
+
+## Nomes e duplicidade
+
+Nomes de arquivos e pastas são normalizados antes de salvar.
+
+Regras principais:
+
+- não é permitido criar duas pastas com o mesmo nome na mesma pasta pai;
+- não é permitido manter dois arquivos com o mesmo nome na mesma pasta;
+- nomes vazios ou inválidos são recusados;
+- caracteres de caminho são removidos ou tratados pela API;
+- renomear um item não altera seu identificador interno.
+
+## Exclusão
+
+Ao excluir um arquivo, ele deixa de ficar disponível na listagem e no download.
+
+Ao excluir uma pasta, arquivos e subpastas internas também entram no fluxo de exclusão.
+
+A exclusão pode ser assíncrona, principalmente em pastas com muitos itens.
+
+<Note>
+  A resposta `202` indica que a exclusão foi iniciada. Ela não garante que todos os objetos internos já foram removidos do storage.
+</Note>
+
+Pastas com upload em andamento podem não ser excluídas até o upload finalizar ou falhar.
+
+## Status de arquivo
+
+| Status | Descrição |
+| --- | --- |
+| `waiting_upload` | Registro criado e aguardando envio do arquivo. |
+| `receiving_upload` | Upload em andamento. |
+| `uploaded` | Arquivo recebido e salvo com sucesso. |
+| `failed` | Upload falhou ou foi recusado. |
+| `deleting` | Exclusão solicitada e em processamento. |
+| `deleted` | Item excluído. |
+| `delete_failed` | Falha ao remover o arquivo do storage. |
+
+## Bloqueios comuns
+
+| Situação | Como tratar |
+| --- | --- |
+| Armazenamento desabilitado | Verifique plano, configuração da conta e permissão do recurso. |
+| Credencial sem escopo | Gere ou atualize a credencial com permissão de armazenamento. |
+| Subconta sem acesso | Habilite o recurso para a subconta ou execute pela conta principal. |
+| Cota excedida | Exclua arquivos antigos ou aumente a cota disponível. |
+| Arquivo maior que o limite | Reduza o arquivo antes de enviar. |
+| Assinatura expirada | Gere uma nova assinatura de upload. |
+| Nome duplicado | Renomeie o arquivo ou envie para outra pasta. |
+
+<Card title="Códigos de erro" icon="triangle-exclamation" horizontal href="/errors/storage">
+  Consulte erros de permissão, cota, pastas, arquivos, upload e download.
+</Card>
+
+## Boas práticas
+
+- Habilite armazenamento para subcontas apenas quando necessário.
+- Revise permissões de usuários periodicamente.
+- Evite armazenar arquivos sem finalidade operacional.
+- Remova arquivos antigos para manter espaço disponível.
+- Use pastas para separar documentos sensíveis de arquivos operacionais.
+- Confira `summary.available_bytes` antes de enviar arquivos grandes.
+- Não exponha assinaturas de upload ou links temporários em logs públicos.
+- Gere uma nova assinatura quando o upload falhar ou expirar.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Upload e download" icon="cloud-arrow-up" href="/storage/upload-download">
+    Veja como enviar e baixar arquivos no armazenamento.
+  </Card>
+
+  <Card title="Pastas e arquivos" icon="folder-tree" href="/storage/files-and-folders">
+    Veja como organizar, navegar, renomear e excluir itens.
+  </Card>
+
+  <Card title="Preparar upload" icon="file-arrow-up" href="/api-reference/storage/prepare-upload">
+    Gere assinatura temporária para envio.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/storage">
+    Consulte erros de armazenamento e upload.
+  </Card>
+</Columns>

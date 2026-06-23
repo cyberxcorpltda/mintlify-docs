@@ -1,0 +1,71 @@
+---
+title: "Excluir item"
+description: "Inicie a exclusão de um arquivo ou pasta do armazenamento."
+sidebarTitle: "Excluir item"
+api: "DELETE /v1/storage/items/{item_type}/{item_id}"
+playground: "interactive"
+keywords: ["excluir arquivo", "excluir pasta", "storage delete", "lazy data"]
+---
+
+Inicia a exclusão de um arquivo ou pasta do armazenamento.
+
+A exclusão é assíncrona. A resposta `202` indica que a solicitação foi aceita e o item entrou em processamento de remoção.
+
+<ResponseExample>
+
+```json 202
+{
+  "code": 202,
+  "message": "Exclusão do arquivo iniciada.",
+  "result": {
+    "item_type": "file",
+    "item_id": "9fcb573b-7f62-4774-978b-07e89dfef5f2"
+  }
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Arquivo não localizado."
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "Aguarde o upload em andamento antes de excluir esta pasta."
+}
+```
+
+</ResponseExample>
+
+## Parâmetros
+
+<ParamField path="item_type" type="string" required placeholder="file">
+  Tipo do item.
+</ParamField>
+
+Valores aceitos:
+
+| Valor | Descrição |
+| --- | --- |
+| `file` | Arquivo armazenado. |
+| `folder` | Pasta do armazenamento. |
+
+<ParamField path="item_id" type="string" required>
+  ID do arquivo ou pasta.
+</ParamField>
+
+## Resposta
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `item_type` | `string` | Tipo do item enviado para exclusão. |
+| `item_id` | `string` | ID do item enviado para exclusão. |
+
+## Regras importantes
+
+- Ao excluir uma pasta, arquivos e subpastas internas também entram no fluxo de exclusão.
+- Pastas com upload em andamento não podem ser excluídas até o upload finalizar ou falhar.
+- Se houver falha ao remover objeto do storage, o item pode ficar com status `delete_failed`.

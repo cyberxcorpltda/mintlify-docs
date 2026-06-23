@@ -1,0 +1,195 @@
+---
+title: "Monitoramentos"
+description: "Códigos de erro relacionados à configuração, criação, cobrança e execução de monitoramentos."
+sidebarTitle: "Monitoramentos"
+keywords: ["erro monitoramento", "monitoramento processual", "monitoramento cpf", "monitoramento cnpj", "códigos de erro lazy data"]
+---
+
+Esta página lista os principais erros retornados pelos recursos de **monitoramento** da API Lazy Data.
+
+Esses erros podem ocorrer em monitoramentos processuais, de pessoa física, de pessoa jurídica, listagem, detalhe, cancelamento, validação de alvo, cobrança e checagens recorrentes.
+
+## Estrutura do erro
+
+Os erros seguem o contrato base da API:
+
+```json
+{
+  "code": 400,
+  "message": "Frequência de atualização inválida.",
+  "error_code": 45008,
+  "result": null
+}
+```
+
+<ResponseField name="code" type="integer" required>
+  Código HTTP retornado na resposta ou, em alguns fluxos internos, código específico do erro.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva do erro.
+</ResponseField>
+
+<ResponseField name="error_code" type="integer">
+  Código interno específico da Lazy Data, quando retornado separadamente do status HTTP.
+</ResponseField>
+
+<ResponseField name="result" type="object | null">
+  Detalhes adicionais do erro, quando houver.
+</ResponseField>
+
+<Note>
+  Para tratamento programático, use `error_code` quando ele estiver presente. Quando `error_code` não existir, use `code` combinado com `message`.
+</Note>
+
+## Exemplos de resposta
+
+<ResponseExample>
+
+```json 400
+{
+  "code": 400,
+  "message": "Número do processo inválido."
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Frequência de atualização inválida.",
+  "error_code": 45008
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A funcionalidade de monitoramento não está habilitada para a conta atual.",
+  "error_code": 45002
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Processo não encontrado no tribunal selecionado.",
+  "error_code": 45007
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "Já existe um monitoramento para este processo e tribunal.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "status": "active"
+  }
+}
+```
+
+</ResponseExample>
+
+## Autenticação e permissão
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `401` | Informe a credencial da API no header Authorization. | O header `Authorization` não foi enviado ou não usa Bearer token. |
+| `401` | Credencial da API inválida. | A chave enviada não pôde ser autenticada. |
+| `403` | A credencial da API não possui permissão para este recurso. | A credencial não possui o escopo `monitoring`. |
+| `45001` | Não foi possível identificar um plano válido para a conta. | A conta não possui plano válido ou o plano não pôde ser resolvido. |
+| `45002` | A funcionalidade de monitoramento não está habilitada para a conta atual. | O plano atual não permite monitoramentos. |
+| `41007` | A subconta não possui permissão para acessar este recurso. | A subconta não possui o recurso de monitoramento habilitado. |
+| `41008` | A subconta atingiu o limite mensal configurado. | O limite mensal da subconta foi atingido ao tentar reservar cobrança. |
+| `44001` | Existe uma fatura pós-paga vencida. Regularize o pagamento para continuar usando a plataforma. | A conta possui bloqueio financeiro por fatura pós-paga vencida. |
+
+## Configuração de monitoramento
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `45003` | O monitoramento solicitado não foi encontrado. | O produto de monitoramento não existe, não está disponível para a conta ou o ID de monitoramento informado não foi localizado. |
+| `45004` | O monitoramento solicitado está inativo. | O produto de monitoramento existe, mas está desabilitado. |
+| `45008` | Frequência de atualização inválida. | O `frequency_id` enviado não existe ou não está ativo para o monitoramento solicitado. |
+
+## Processo e tribunal
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `45005` | Número do processo inválido. | O número do processo não está no padrão CNJ ou não passou na validação do dígito verificador. |
+| `45006` | Tribunal inválido para monitoramento. | O `court_code` informado não corresponde a um tribunal DataJud aceito. |
+| `45007` | Processo não encontrado no tribunal selecionado. | O processo é estruturalmente válido, mas não foi localizado no tribunal informado. |
+| `45011` | Não foi possível consultar o provedor do monitoramento. | Falha de comunicação, indisponibilidade ou erro temporário do provedor. |
+
+<Warning>
+  Em monitoramento processual, informe sempre o `court_code`. Se você tiver apenas o número do processo, use o endpoint de detectar tribunal antes de validar ou criar o monitoramento.
+</Warning>
+
+## Pessoa física e pessoa jurídica
+
+As rotas de validação e criação de monitoramento PF/PJ também podem retornar erros reaproveitados das consultas cadastrais.
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `42013` | CNPJ inválido. | O CNPJ informado não passou na validação. |
+| `42014` | CNPJ não encontrado. | O CNPJ é válido, mas não foi localizado na base de validação. |
+| `42038` | CPF inválido. | O CPF informado não passou na validação. |
+| `42039` | CPF não encontrado. | O CPF é válido, mas não foi localizado na base de validação. |
+| `42040` | Os dados desta consulta não estão disponíveis por restrição de privacidade prevista na LGPD. | O CPF possui restrição de privacidade. |
+| `42041` | A consulta de dados de menores de idade não é permitida. | O CPF pertence a uma pessoa menor de idade. |
+| `42042` | A consulta de dados de pessoas politicamente expostas não é permitida. | O CPF pertence a uma pessoa marcada como PEP. |
+
+## Fontes e duplicidade
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `400` | Uma ou mais bases selecionadas não estão disponíveis para monitoramento. | Algum `source_id` enviado em `sources[]` não existe ou não está disponível para o tipo informado. |
+| `400` | Selecione pelo menos uma base para monitoramento. | Nenhuma fonte válida foi enviada em `sources[]`. |
+| `409` | Já existe um monitoramento para este processo e tribunal. | A conta já possui monitoramento ativo para o mesmo processo e `court_code`. |
+| `409` | Já existe um monitoramento para este CPF. | A conta já possui monitoramento ativo para o CPF informado. |
+| `409` | Já existe um monitoramento para este CNPJ. | A conta já possui monitoramento ativo para o CNPJ informado. |
+
+## Cobrança
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `45010` | Não foi possível reservar o valor do monitoramento. Verifique saldo disponível ou limite mensal. | Saldo insuficiente, limite mensal atingido ou falha ao reservar a cobrança da checagem inicial. |
+
+## Execução recorrente
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `45011` | Não foi possível consultar o provedor do monitoramento. | Uma checagem recorrente falhou por indisponibilidade ou erro do provedor. |
+
+<Note>
+  Falhas recorrentes podem pausar temporariamente um monitoramento até que a próxima tentativa seja executada conforme a política interna de retry.
+</Note>
+
+## Validação de payload
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `422` | Validação do payload falhou. | Campo obrigatório ausente, tipo inválido, e-mail inválido no schema ou parâmetro fora do contrato da API reference. |
+| `45009` | E-mail inválido para notificação. | O e-mail de notificação não pôde ser aceito em fluxos de monitoramento. |
+
+## Segurança do painel
+
+| Código | Mensagem | Quando ocorre |
+| --- | --- | --- |
+| `45012` | O monitoramento precisa ser enviado em modo criptografado. | Código usado por fluxos criptografados do painel. Não é esperado nas rotas públicas Bearer da API reference. |
+
+## Tratamento recomendado
+
+<Steps>
+  <Step title="Valide o alvo antes de criar">
+    Use as rotas de validação para CPF, CNPJ ou processo antes de criar o monitoramento.
+  </Step>
+  <Step title="Detecte o tribunal quando necessário">
+    Para processos, obtenha o `court_code` pelo endpoint de detecção quando você tiver apenas o número CNJ.
+  </Step>
+  <Step title="Trate duplicidade como estado existente">
+    Para `409`, use o `id` retornado em `result` para redirecionar o usuário ao monitoramento já criado.
+  </Step>
+  <Step title="Não faça retry em erros definitivos">
+    CPF/CNPJ inválido, processo inválido, tribunal inválido e frequência inválida exigem correção do payload antes de nova tentativa.
+  </Step>
+</Steps>

@@ -1,0 +1,230 @@
+---
+title: "Armazenamento"
+keywords: ["upload armazenamento", "storage", "multipart", "arquivo", "assinatura", "lazy data"]
+description: "Envie arquivos para o armazenamento da conta usando uma assinatura temporária de upload."
+sidebarTitle: "Armazenamento"
+api: "POST https://upload.lazydata.com.br/storage"
+playground: "interactive"
+authMethod: "none"
+---
+
+Envia um arquivo para o armazenamento da conta usando o serviço de upload da Lazy Data.
+
+Este endpoint **não usa a URL base da API principal**. A chamada deve ser feita para:
+
+```text
+https://upload.lazydata.com.br/storage
+```
+
+<Warning>
+  Esta requisição não usa `Authorization: Bearer`. A autenticação do upload é feita pelo header `X-LazyData-Upload-Signature`, retornado na etapa de preparação do upload.
+</Warning>
+
+## Fluxo
+
+<Steps>
+  <Step title="Solicite a assinatura">
+    Informe o nome do arquivo e a pasta de destino para receber `upload_url`, `signature`, `signature_expires_at`, `max_size` e os metadados iniciais do arquivo.
+  </Step>
+  <Step title="Envie o arquivo">
+    Faça `POST` para `upload_url`, enviando o arquivo em `multipart/form-data` e a assinatura no header `X-LazyData-Upload-Signature`.
+  </Step>
+  <Step title="Receba o registro do arquivo">
+    Após o envio, a API salva o arquivo no armazenamento e retorna os metadados finais do item.
+  </Step>
+  <Step title="Use o arquivo no storage">
+    Depois de enviado, o arquivo pode ser listado, baixado, renomeado ou excluído conforme as permissões da conta.
+  </Step>
+</Steps>
+
+## Requisição
+
+<ParamField header="X-LazyData-Upload-Signature" type="string" required>
+  Assinatura temporária de upload retornada na preparação do envio para armazenamento.
+</ParamField>
+
+<ParamField body="file" type="file" required>
+  Arquivo enviado em `multipart/form-data`. O nome do campo deve ser exatamente `file`.
+</ParamField>
+
+<Note>
+  O arquivo enviado precisa ter o mesmo nome usado para gerar a assinatura. Se o nome for diferente, o upload será recusado.
+</Note>
+
+## Exemplo com cURL
+
+```bash
+curl --request POST \
+  --url "https://upload.lazydata.com.br/storage" \
+  --header "X-LazyData-Upload-Signature: <assinatura_de_upload>" \
+  --form "file=@./contrato.pdf"
+```
+
+## Exemplo com JavaScript
+
+```javascript
+const formData = new FormData();
+formData.append("file", file, file.name);
+
+const response = await fetch("https://upload.lazydata.com.br/storage", {
+  method: "POST",
+  headers: {
+    "X-LazyData-Upload-Signature": uploadSignature
+  },
+  body: formData
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+<Warning>
+  Não defina manualmente o header `Content-Type` ao usar `FormData` no navegador. O próprio navegador adiciona o boundary correto do `multipart/form-data`.
+</Warning>
+
+## Formatos aceitos
+
+O armazenamento aceita diferentes tipos de arquivo, desde que o upload respeite o tamanho máximo, a assinatura gerada e os limites de espaço da conta.
+
+O tipo MIME é normalizado a partir do arquivo enviado. Quando o navegador envia `application/octet-stream`, a API tenta inferir o tipo com base no nome do arquivo.
+
+## Limites
+
+| Item | Regra |
+| --- | --- |
+| Tamanho máximo por arquivo | Até `1024 MB`. |
+| Campo do arquivo | Deve ser `file`. |
+| Assinatura | Deve estar ativa e corresponder ao arquivo preparado. |
+| Nome do arquivo | Deve ser o mesmo usado na preparação do upload. |
+| Espaço disponível | O arquivo precisa caber no limite de armazenamento da conta. |
+| Nome duplicado | Não é permitido manter dois arquivos com o mesmo nome na mesma pasta. |
+
+## Respostas
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Arquivo enviado.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "type": "file",
+    "name": "contrato.pdf",
+    "parent_id": "54d8a266-4e21-4a9a-9c15-b4b93bc11c6e",
+    "extension": "pdf",
+    "content_type": "application/pdf",
+    "size": 24576,
+    "status": "uploaded",
+    "uploaded_at": "2026-06-22T12:00:00+00:00",
+    "created_at": "2026-06-22T11:59:40+00:00",
+    "updated_at": "2026-06-22T12:00:00+00:00"
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "O arquivo enviado não corresponde ao arquivo assinado."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Assinatura de upload ausente ou inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "O arquivo excede o espaço disponível no armazenamento."
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Arquivo não localizado ou já enviado."
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "Este arquivo não está disponível para upload."
+}
+```
+
+```json 413
+{
+  "code": 413,
+  "message": "O arquivo deve ter no máximo 1 GB."
+}
+```
+
+</ResponseExample>
+
+## Estrutura da resposta `200`
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta. `200` indica que o arquivo foi recebido e salvo no armazenamento.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da operação.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Metadados finais do arquivo armazenado.
+</ResponseField>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador do arquivo no armazenamento. |
+| `type` | `string` | Tipo do item. Para este endpoint, retorna `file`. |
+| `name` | `string` | Nome do arquivo armazenado. |
+| `parent_id` | `string/null` | Identificador da pasta onde o arquivo foi salvo. Quando `null`, o arquivo foi salvo na raiz. |
+| `extension` | `string/null` | Extensão identificada a partir do nome do arquivo. |
+| `content_type` | `string` | Tipo MIME identificado para o arquivo. |
+| `size` | `integer` | Tamanho final do arquivo em bytes. |
+| `status` | `string` | Status atual do arquivo. Após upload bem-sucedido, retorna `uploaded`. |
+| `uploaded_at` | `string` | Data de upload em ISO 8601. |
+| `created_at` | `string` | Data de criação do registro do arquivo em ISO 8601. |
+| `updated_at` | `string` | Data da última atualização do registro em ISO 8601. |
+
+## Status do arquivo
+
+| Status | Descrição |
+| --- | --- |
+| `waiting_upload` | Registro criado e aguardando o envio do arquivo. |
+| `receiving_upload` | Upload em andamento. |
+| `uploaded` | Arquivo recebido e salvo com sucesso. |
+| `failed` | O upload falhou ou foi recusado. |
+
+## Erros comuns
+
+| Status HTTP | Motivo |
+| --- | --- |
+| `400` | Arquivo vazio, nome divergente ou payload inválido. |
+| `401` | Assinatura ausente, inválida ou expirada. |
+| `403` | Armazenamento desabilitado, limite excedido ou espaço insuficiente. |
+| `404` | Arquivo vinculado à assinatura não foi localizado ou já foi enviado. |
+| `409` | O arquivo não está disponível para upload no momento. |
+| `413` | Arquivo acima do limite permitido. |
+| `500` | Falha inesperada ao receber ou salvar o arquivo. |
+
+## Regras importantes
+
+- Use sempre `https://upload.lazydata.com.br/storage`.
+- A assinatura é temporária e deve ser usada apenas para o arquivo preparado.
+- O upload deve ser feito com `multipart/form-data`.
+- O campo do arquivo deve se chamar `file`.
+- O nome do arquivo precisa ser igual ao informado na etapa de assinatura.
+- O arquivo é contabilizado no espaço de armazenamento da conta após o upload.
+- Se o upload falhar, gere uma nova assinatura antes de tentar novamente.
+- Para enviar para uma pasta específica, informe a pasta na etapa de preparação da assinatura.

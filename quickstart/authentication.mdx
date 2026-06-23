@@ -1,0 +1,236 @@
+---
+title: "Autenticação e Autorização"
+description: "Entenda como autenticar requisições na API da Lazy Data e utilizar suas credenciais com segurança."
+icon: "lock"
+sidebarTitle: "Autenticação"
+keywords: ["autenticação", "autorização", "authorization", "bearer token", "api key", "token lazy data", "credenciais api"]
+---
+
+A API da Lazy Data usa autenticação por **Bearer token** para identificar a conta, validar permissões e aplicar regras de plano, saldo, escopos e restrição de IP.
+
+Para acessar endpoints protegidos, envie sua chave de API no header `Authorization`.
+
+```http
+Authorization: Bearer <sua_chave_de_api>
+```
+
+<Warning>
+  Não envie sua chave de API em query string, corpo da requisição, logs públicos ou aplicações frontend sem backend intermediário.
+</Warning>
+
+## Antes de começar
+
+Você precisa criar uma credencial no painel da Lazy Data.
+
+<Card title="Obter credenciais" icon="key" horizontal href="/quickstart/credentials">
+  Veja como criar, gerenciar e configurar permissões de uma chave de API.
+</Card>
+
+Ao criar a credencial, confira:
+
+- escopos habilitados;
+- ambiente de uso;
+- restrição de IP, quando aplicável;
+- permissões da conta ou subconta;
+- limites e regras comerciais do plano.
+
+## Header de autenticação
+
+Todas as rotas protegidas da API principal usam o header:
+
+```http
+Authorization: Bearer <sua_chave_de_api>
+```
+
+Exemplo de requisição:
+
+```bash
+curl --request GET \
+  --url "https://api.lazydata.com.br/v1/search/datasets/pf" \
+  --header "Authorization: Bearer <sua_chave_de_api>"
+```
+
+O token deve ser enviado exatamente no formato `Bearer`, com espaço entre `Bearer` e a chave.
+
+## Exemplo com JavaScript
+
+```javascript
+const response = await fetch("https://api.lazydata.com.br/v1/search/datasets/pf", {
+  method: "GET",
+  headers: {
+    "Authorization": "Bearer <sua_chave_de_api>"
+  }
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+## Exemplo com Python
+
+```python
+import requests
+
+response = requests.get(
+    "https://api.lazydata.com.br/v1/search/datasets/pf",
+    headers={
+        "Authorization": "Bearer <sua_chave_de_api>"
+    },
+)
+
+print(response.json())
+```
+
+## Autenticação vs autorização
+
+Autenticação confirma que a chave enviada é válida.
+
+Autorização confirma se essa chave pode executar o recurso solicitado.
+
+| Conceito | O que valida | Exemplo de erro |
+| --- | --- | --- |
+| Autenticação | Se a chave existe, está ativa e foi enviada corretamente. | `401` |
+| Autorização | Se a chave possui escopo, plano, saldo, IP e permissão para o recurso. | `403` |
+
+<Note>
+  Trate `401` e `403` separadamente. `401` normalmente exige corrigir ou trocar a credencial. `403` exige revisar permissão, plano, saldo, IP, subconta ou política do recurso.
+</Note>
+
+## Escopos
+
+As credenciais podem ter escopos para limitar quais recursos podem ser acessados.
+
+Exemplos de escopos:
+
+| Escopo | Uso |
+| --- | --- |
+| `search` | Consultas por CPF, CNPJ, processo, veículo e datasets. |
+| `validation` | Validação cadastral e comparação facial. |
+| `enrichment` | Criação, configuração, execução e acompanhamento de enriquecimentos. |
+| `storage` | Listagem, upload, download, renomeação e exclusão de arquivos. |
+| `monitoring` | Configuração, criação, listagem, detalhe e cancelamento de monitoramentos. |
+
+<Warning>
+  Os nomes e disponibilidade dos escopos podem variar conforme a configuração da conta. Use apenas os escopos necessários para cada integração.
+</Warning>
+
+## Restrição de IP
+
+Credenciais podem ter restrição de IP para aceitar requisições apenas de origens autorizadas.
+
+Use essa proteção quando a integração roda em servidores com IP fixo ou previsível.
+
+Boas práticas:
+
+- habilite restrição de IP em integrações backend;
+- evite usar chaves restritas em ambientes com IP dinâmico sem controle;
+- mantenha listas de IP atualizadas;
+- crie credenciais separadas para produção, homologação e testes.
+
+## Subcontas
+
+Quando uma credencial pertence a uma subconta, a API também valida as permissões e limites configurados para essa subconta.
+
+Uma requisição pode ser bloqueada quando:
+
+- a subconta não possui acesso ao recurso;
+- a subconta atingiu o limite mensal;
+- a conta principal removeu a permissão;
+- o plano da conta principal não permite o recurso.
+
+## Sandbox
+
+Alguns endpoints aceitam chamadas de teste sem consumo de saldo.
+
+Para usar sandbox, envie o header:
+
+```http
+x-ambient: sandbox
+```
+
+O header de sandbox não substitui autenticação. Em rotas protegidas, envie também:
+
+```http
+Authorization: Bearer <sua_chave_de_api>
+```
+
+<Card title="Ambiente de teste" icon="flask" horizontal href="/quickstart/sandbox">
+  Veja quais fluxos aceitam sandbox e como validar integrações com segurança.
+</Card>
+
+## Uploads assinados
+
+O serviço de upload usa autenticação própria por assinatura temporária.
+
+Uploads para `upload.lazydata.com.br` não usam `Authorization: Bearer` no envio do arquivo.
+
+Em vez disso, envie:
+
+```http
+X-LazyData-Upload-Signature: <assinatura_de_upload>
+```
+
+<Info>
+  A assinatura de upload é gerada por uma chamada autenticada na API principal. Depois disso, o envio do arquivo usa apenas a assinatura temporária.
+</Info>
+
+<Columns cols={2}>
+  <Card title="Upload para enriquecimento" icon="cloud-arrow-up" href="/api-reference/upload/enrichment">
+    Veja como enviar bases para `upload.lazydata.com.br/enrichment`.
+  </Card>
+
+  <Card title="Upload para armazenamento" icon="folder-open" href="/api-reference/upload/storage">
+    Veja como enviar arquivos para `upload.lazydata.com.br/storage`.
+  </Card>
+</Columns>
+
+## Erros comuns
+
+| Status | Motivo comum | Como tratar |
+| --- | --- | --- |
+| `401` | Header `Authorization` ausente. | Envie `Authorization: Bearer <chave>`. |
+| `401` | Credencial inválida, revogada ou malformada. | Gere ou revise a chave usada. |
+| `403` | Escopo ausente. | Habilite o escopo necessário na credencial. |
+| `403` | IP não autorizado. | Atualize a restrição de IP ou use origem permitida. |
+| `403` | Plano, saldo ou limite bloqueando a operação. | Revise plano, saldo, fatura, limite mensal ou subconta. |
+
+Exemplo de erro:
+
+```json
+{
+  "code": 401,
+  "message": "Credencial da API inválida.",
+  "result": null
+}
+```
+
+## Segurança
+
+- Use uma credencial por aplicação, ambiente ou integração crítica.
+- Mantenha chaves em variáveis de ambiente ou cofre de segredos.
+- Rotacione credenciais periodicamente.
+- Revogue chaves antigas ou comprometidas.
+- Não compartilhe chaves em tickets, prints, planilhas ou logs.
+- Não exponha credenciais em aplicações frontend.
+- Habilite restrição de IP quando possível.
+- Conceda apenas os escopos necessários para cada integração.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Obter credenciais" icon="key" href="/quickstart/credentials">
+    Crie e configure sua chave de API.
+  </Card>
+
+  <Card title="Ambiente de teste" icon="flask" href="/quickstart/sandbox">
+    Teste integrações sem consumir saldo.
+  </Card>
+
+  <Card title="Introdução da API" icon="book-open" href="/api-reference/introduction">
+    Veja padrão de resposta, erros e boas práticas gerais.
+  </Card>
+
+  <Card title="Códigos de erro" icon="triangle-exclamation" href="/errors/overview">
+    Consulte erros de autenticação, permissão, plano, saldo e provedor.
+  </Card>
+</Columns>

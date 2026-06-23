@@ -1,0 +1,277 @@
+---
+title: "Enriquecimento"
+description: "Entenda o upload de arquivos usados no enriquecimento de bases."
+sidebarTitle: "Enriquecimento"
+keywords: ["upload enriquecimento", "arquivo enriquecimento", "csv", "xls", "xlsx", "assinatura de upload", "lazy data"]
+---
+
+O upload para **enriquecimento** é usado para enviar bases de CPF ou CNPJ que serão analisadas e enriquecidas pelos datasets selecionados.
+
+Após o upload, a Lazy Data valida o arquivo, identifica a estrutura da planilha, detecta a coluna de documento e prepara o enriquecimento para configuração.
+
+<Card title="Endpoint técnico" icon="cloud-arrow-up" horizontal href="/api-reference/upload/enrichment">
+  Consulte parâmetros, exemplos e respostas da rota de upload para enriquecimento.
+</Card>
+
+## Endpoint
+
+```http
+POST https://upload.lazydata.com.br/enrichment
+```
+
+<Warning>
+  Este endpoint não usa a URL base da API principal. O arquivo deve ser enviado para `https://upload.lazydata.com.br/enrichment`.
+</Warning>
+
+## Header obrigatório
+
+A requisição deve enviar a assinatura temporária de upload no header:
+
+```http
+X-LazyData-Upload-Signature: <assinatura_de_upload>
+```
+
+<Warning>
+  O upload não usa `Authorization: Bearer`. A autenticação do envio é feita pela assinatura retornada na preparação do enriquecimento.
+</Warning>
+
+## Como obter a assinatura
+
+A assinatura é gerada no fluxo de criação ou preparação do enriquecimento.
+
+Antes do upload, a aplicação cria o enriquecimento informando tipo da base, nome e metadados do arquivo. A resposta retorna:
+
+| Campo | Descrição |
+| --- | --- |
+| `upload_url` | URL do serviço de upload. Para enriquecimento, usa `https://upload.lazydata.com.br/enrichment`. |
+| `signature` | Assinatura temporária usada no header `X-LazyData-Upload-Signature`. |
+| `signature_expires_at` | Data de expiração da assinatura. |
+| `id` | Identificador do enriquecimento criado. |
+
+<Card title="Criar enriquecimento" icon="plus" horizontal href="/api-reference/enrichment/create">
+  Crie o registro inicial e gere a assinatura temporária para enviar o arquivo.
+</Card>
+
+<Note>
+  A assinatura deve ser usada apenas para o upload atual. Se expirar ou o envio falhar, gere uma nova assinatura antes de tentar novamente.
+</Note>
+
+## Formatos aceitos
+
+O upload de enriquecimento aceita arquivos de base nos formatos:
+
+| Extensão | Uso |
+| --- | --- |
+| `csv` | Recomendado para bases grandes e integrações automatizadas. |
+| `xls` | Planilhas legadas do Excel. |
+| `xlsx` | Planilhas modernas do Excel. |
+
+O arquivo deve conter ao menos uma coluna com CPF ou CNPJ, conforme o tipo do enriquecimento.
+
+## Limite por arquivo
+
+Cada arquivo pode ter até `1024 MB`.
+
+```text
+Limite por arquivo: 1024 MB
+```
+
+Arquivos acima desse limite são recusados antes da análise.
+
+## Envio do arquivo
+
+O arquivo deve ser enviado em `multipart/form-data`.
+
+O nome do campo do arquivo deve ser exatamente `file`.
+
+```bash
+curl --request POST \
+  --url "https://upload.lazydata.com.br/enrichment" \
+  --header "X-LazyData-Upload-Signature: <assinatura_de_upload>" \
+  --form "file=@./base-clientes.csv"
+```
+
+Exemplo com JavaScript:
+
+```javascript
+const formData = new FormData();
+formData.append("file", file, file.name);
+
+const response = await fetch("https://upload.lazydata.com.br/enrichment", {
+  method: "POST",
+  headers: {
+    "X-LazyData-Upload-Signature": uploadSignature
+  },
+  body: formData
+});
+
+const data = await response.json();
+```
+
+<Note>
+  Ao usar `FormData` no navegador, não defina manualmente o header `Content-Type`. O navegador adiciona o boundary correto do `multipart/form-data`.
+</Note>
+
+## Validações realizadas
+
+Durante o upload, a Lazy Data valida:
+
+- assinatura temporária;
+- validade da assinatura;
+- enriquecimento relacionado;
+- se o arquivo já foi enviado;
+- se o enriquecimento ainda aceita upload;
+- nome e extensão do arquivo;
+- tamanho do arquivo;
+- tipo de conteúdo;
+- integridade inicial;
+- estrutura mínima da planilha.
+
+<Warning>
+  O arquivo enviado precisa manter o mesmo nome e extensão usados para gerar a assinatura. Se forem diferentes, o upload pode ser recusado.
+</Warning>
+
+## Análise do arquivo
+
+Após o upload, a Lazy Data inicia a validação e análise do arquivo.
+
+A análise pode identificar:
+
+- total de linhas;
+- presença de cabeçalho;
+- delimitador, no caso de CSV;
+- colunas disponíveis;
+- possível coluna de CPF ou CNPJ;
+- amostra das primeiras linhas;
+- formato de dados das colunas;
+- documentos inválidos ou ausentes.
+
+Essa etapa continua em segundo plano após a resposta inicial do upload.
+
+## Resposta de upload recebido
+
+Quando o arquivo é aceito, a resposta indica que a validação e análise foram iniciadas.
+
+```json
+{
+  "code": 202,
+  "message": "Arquivo recebido. O processamento foi iniciado.",
+  "result": {
+    "id": "8a1f7229-7cf0-48f8-912f-97ff6a4b1111",
+    "type": "pf",
+    "name": "Base de clientes",
+    "status": "validating_file",
+    "status_label": "Validando arquivo"
+  }
+}
+```
+
+<Note>
+  O retorno `202` não significa que o enriquecimento já pode ser executado. Aguarde o status `waiting_configuration` antes de selecionar coluna e datasets.
+</Note>
+
+## Status após upload
+
+O enriquecimento pode passar por estados como:
+
+| Status | Descrição |
+| --- | --- |
+| `receiving_upload` | Arquivo sendo recebido pelo serviço de upload. |
+| `validating_file` | Arquivo recebido e validação inicial em andamento. |
+| `analyzing_file` | Arquivo validado e amostra em análise. |
+| `uploading_storage` | Arquivo validado e sendo salvo no storage. |
+| `waiting_configuration` | Arquivo pronto para configurar coluna e datasets. |
+| `failed` | Arquivo recusado ou análise falhou. |
+
+## Arquivo sem cabeçalho
+
+Quando a Lazy Data não identifica cabeçalho válido, as colunas podem ser exibidas por índice ou com nomes genéricos.
+
+Exemplo:
+
+```text
+Coluna 1
+Coluna 2
+Coluna 3
+```
+
+Nesse caso, use a amostra retornada em `analysis.columns[]` para selecionar manualmente a coluna de CPF ou CNPJ.
+
+## Coluna de documento
+
+A coluna de documento é usada como chave do enriquecimento.
+
+| Tipo de enriquecimento | Documento esperado |
+| --- | --- |
+| `pf` | CPF |
+| `pj` | CNPJ |
+
+Se a coluna selecionada possuir documentos inválidos, esses registros serão contabilizados como `invalid_documents` durante o processamento.
+
+<Card title="Arquivos de entrada e saída" icon="file-spreadsheet" horizontal href="/enrichment/files">
+  Veja regras de estrutura, cabeçalho, coluna de documento e arquivos gerados.
+</Card>
+
+## Próxima etapa
+
+Depois que o enriquecimento chegar em `waiting_configuration`, selecione:
+
+- coluna do documento;
+- datasets disponíveis para o tipo da base;
+- campos adicionais exigidos pelos datasets, quando houver.
+
+Em seguida, inicie o processamento.
+
+<Card title="Configurar e executar" icon="play" horizontal href="/api-reference/enrichment/start">
+  Envie `document_column`, `datasets` e `additional` para colocar o enriquecimento na fila.
+</Card>
+
+## Falhas comuns
+
+Possíveis falhas no upload de enriquecimento:
+
+- assinatura ausente, inválida ou expirada;
+- enriquecimento não encontrado;
+- arquivo já enviado;
+- enriquecimento em status incompatível com upload;
+- arquivo acima de `1024 MB`;
+- formato não permitido;
+- tipo de conteúdo incompatível;
+- arquivo vazio ou inválido;
+- falha ao ler a planilha;
+- nome ou extensão diferente do arquivo assinado.
+
+<Card title="Códigos de erro de upload" icon="triangle-exclamation" horizontal href="/errors/upload">
+  Veja os erros possíveis durante assinatura, envio, validação e análise do arquivo.
+</Card>
+
+## Boas práticas
+
+- Use arquivos CSV para bases muito grandes.
+- Use cabeçalhos claros.
+- Evite colunas duplicadas.
+- Remova linhas vazias antes do upload.
+- Não misture CPF e CNPJ no mesmo arquivo.
+- Envie o arquivo com o mesmo nome usado na preparação.
+- Revise a coluna detectada antes de iniciar o enriquecimento.
+- Solicite uma nova assinatura caso o upload expire ou falhe.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Criar enriquecimento" icon="plus" href="/enrichment/create">
+    Veja o fluxo completo para criar, enviar e configurar um enriquecimento.
+  </Card>
+
+  <Card title="Endpoint de upload" icon="cloud-arrow-up" href="/api-reference/upload/enrichment">
+    Consulte a documentação técnica da rota de upload.
+  </Card>
+
+  <Card title="Consultar status" icon="clock" href="/api-reference/enrichment/status">
+    Acompanhe validação, análise e progresso do enriquecimento.
+  </Card>
+
+  <Card title="Datasets disponíveis" icon="database" href="/api-reference/enrichment/datasets">
+    Liste datasets PF ou PJ habilitados para enriquecimento.
+  </Card>
+</Columns>

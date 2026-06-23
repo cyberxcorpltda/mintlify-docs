@@ -1,0 +1,66 @@
+---
+title: "Detalhar monitoramento"
+keywords: ["detalhar monitoramento", "eventos monitoramento", "lazy data"]
+description: "Consulte detalhes, fontes e últimos eventos de um monitoramento."
+sidebarTitle: "Detalhar"
+api: "GET /v1/monitoring/{monitoring_id}"
+playground: "interactive"
+---
+
+Retorna detalhes de um monitoramento ativo, incluindo alvo, fontes, status, estatísticas e últimos eventos.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Monitoramento retornado com sucesso.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "name": "Processo cliente exemplo",
+    "type": "process",
+    "status": "active",
+    "status_label": "Ativo",
+    "notification_email": "alertas@example.com",
+    "price_per_check": 0.03,
+    "checks_count": 1,
+    "events_count": 1,
+    "charged_total": 0.03,
+    "target": {
+      "type": "process",
+      "process_number": "0000001-77.2026.8.26.0000",
+      "court_code": "tjsp",
+      "court_acronym": "TJSP"
+    },
+    "events": []
+  }
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Monitoramento não encontrado."
+}
+```
+
+</ResponseExample>
+
+## Parâmetros
+
+<ParamField path="monitoring_id" type="string" required>
+  ID do monitoramento.
+</ParamField>
+
+## Eventos
+
+O campo `events` retorna os últimos eventos registrados para o monitoramento.
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | ID do evento. |
+| `type` | `string` | Tipo do evento, como `initial` ou alteração detectada. |
+| `created_at` | `string` | Data de criação do evento. |
+| `notification` | `object` | Status de envio do e-mail de alerta. |
+| `movements` | `array<object>` | Movimentações processuais, quando aplicável. |
+| `changes` | `array<object>` | Alterações detectadas em fontes monitoradas. |

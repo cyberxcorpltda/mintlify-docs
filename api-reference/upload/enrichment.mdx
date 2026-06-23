@@ -1,0 +1,267 @@
+---
+title: "Enriquecimento"
+keywords: ["upload enriquecimento", "multipart", "arquivo", "csv", "xls", "xlsx", "lazy data"]
+description: "Envie o arquivo de entrada de um enriquecimento para o serviço de upload da Lazy Data."
+sidebarTitle: "Enriquecimento"
+api: "POST https://upload.lazydata.com.br/enrichment"
+playground: "interactive"
+authMethod: "none"
+---
+
+Envia o arquivo de entrada de um enriquecimento para o serviço de upload da Lazy Data.
+
+Este endpoint **não usa a URL base da API principal**. A chamada deve ser feita para:
+
+```text
+https://upload.lazydata.com.br/enrichment
+```
+
+<Warning>
+  Esta requisição não usa `Authorization: Bearer`. A autenticação do upload é feita pelo header `X-LazyData-Upload-Signature`, retornado na etapa de preparação do enriquecimento.
+</Warning>
+
+## Fluxo
+
+<Steps>
+  <Step title="Prepare o enriquecimento">
+    Crie ou prepare o enriquecimento informando tipo, nome e metadados do arquivo.
+  </Step>
+  <Step title="Receba a assinatura">
+    A resposta da preparação retorna `upload_url`, `signature` e `signature_expires_at`.
+  </Step>
+  <Step title="Envie o arquivo">
+    Faça `POST` para `upload_url`, enviando o arquivo em `multipart/form-data` e a assinatura no header `X-LazyData-Upload-Signature`.
+  </Step>
+  <Step title="Aguarde a análise">
+    Após o upload, o arquivo entra em validação e análise para identificação de colunas, amostras e quantidade de registros.
+  </Step>
+</Steps>
+
+## Requisição
+
+<ParamField header="X-LazyData-Upload-Signature" type="string" required>
+  Assinatura temporária de upload retornada na preparação do enriquecimento.
+</ParamField>
+
+<ParamField body="file" type="file" required>
+  Arquivo enviado em `multipart/form-data`. O nome do campo deve ser exatamente `file`.
+</ParamField>
+
+<Note>
+  O arquivo enviado precisa ter o mesmo nome e extensão usados para gerar a assinatura. Se o nome ou extensão forem diferentes, o upload será recusado.
+</Note>
+
+## Exemplo com cURL
+
+```bash
+curl --request POST \
+  --url "https://upload.lazydata.com.br/enrichment" \
+  --header "X-LazyData-Upload-Signature: <assinatura_de_upload>" \
+  --form "file=@./base-clientes.csv"
+```
+
+## Exemplo com JavaScript
+
+```javascript
+const formData = new FormData();
+formData.append("file", file, file.name);
+
+const response = await fetch("https://upload.lazydata.com.br/enrichment", {
+  method: "POST",
+  headers: {
+    "X-LazyData-Upload-Signature": uploadSignature
+  },
+  body: formData
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+<Warning>
+  Não defina manualmente o header `Content-Type` ao usar `FormData` no navegador. O próprio navegador adiciona o boundary correto do `multipart/form-data`.
+</Warning>
+
+## Formatos aceitos
+
+| Extensão | Content types aceitos |
+| --- | --- |
+| `csv` | `text/csv`, `application/csv`, `text/plain`, `application/vnd.ms-excel`, `application/octet-stream` |
+| `xls` | `application/vnd.ms-excel`, `application/octet-stream`, `application/x-ole-storage` |
+| `xlsx` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `application/octet-stream` |
+
+## Limites
+
+| Item | Regra |
+| --- | --- |
+| Tamanho máximo | Até `1024 MB`. |
+| Campo do arquivo | Deve ser `file`. |
+| Assinatura | Deve estar ativa e corresponder ao enriquecimento. |
+| Nome do arquivo | Deve ser o mesmo usado na preparação do upload. |
+| Extensão | Deve ser `csv`, `xls` ou `xlsx`. |
+
+## Respostas
+
+<ResponseExample>
+
+```json 202
+{
+  "code": 202,
+  "message": "Arquivo recebido. O processamento foi iniciado.",
+  "result": {
+    "id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "type": "pf",
+    "name": "Base de clientes",
+    "status": "validating_file",
+    "status_label": "Validando arquivo",
+    "file": {
+      "id": null,
+      "signature": null,
+      "name": "base-clientes.csv",
+      "extension": "csv",
+      "content_type": "text/csv",
+      "size": 24576,
+      "storage_key": null,
+      "uploaded_at": null,
+      "total_rows": null
+    },
+    "progress": {
+      "stage": "validating_file",
+      "stage_label": "Arquivo recebido. Preparando análise...",
+      "percent": 50,
+      "uploaded_bytes": 24576,
+      "total_bytes": 24576,
+      "total_rows": 0,
+      "processed_rows": 0,
+      "enriched_documents": 0,
+      "invalid_documents": 0,
+      "not_found_documents": 0,
+      "failed_rows": 0
+    }
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Formato de arquivo não permitido para este upload."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Assinatura de upload ausente ou inválida."
+}
+```
+
+```json 404
+{
+  "code": 404,
+  "message": "Enriquecimento não localizado."
+}
+```
+
+```json 409
+{
+  "code": 409,
+  "message": "O arquivo deste enriquecimento já foi enviado."
+}
+```
+
+```json 413
+{
+  "code": 413,
+  "message": "O arquivo deve ter no máximo 1 GB."
+}
+```
+
+</ResponseExample>
+
+## Estrutura da resposta `202`
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta. `202` indica que o arquivo foi recebido e a validação/análise foi iniciada.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da etapa iniciada.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Dados atuais do enriquecimento após o recebimento do arquivo.
+</ResponseField>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | Identificador do enriquecimento. |
+| `type` | `string` | Tipo do enriquecimento: `pf` ou `pj`. |
+| `name` | `string` | Nome definido para o enriquecimento. |
+| `status` | `string` | Status atual do enriquecimento. |
+| `status_label` | `string` | Nome amigável do status, quando disponível. |
+| `file` | `object` | Metadados do arquivo enviado. |
+| `progress` | `object` | Andamento da recepção e análise do arquivo. |
+
+## Estrutura de `result.file`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string/null` | Identificador definitivo do arquivo após validação e envio para storage. |
+| `signature` | `string/null` | Assinatura interna do arquivo após validação, quando disponível. |
+| `name` | `string` | Nome do arquivo. |
+| `extension` | `string` | Extensão do arquivo. |
+| `content_type` | `string` | Tipo MIME detectado ou informado. |
+| `size` | `integer` | Tamanho do arquivo em bytes. |
+| `storage_key` | `string/null` | Chave de armazenamento após envio definitivo para storage. |
+| `uploaded_at` | `string/null` | Data de upload definitivo após validação, em ISO 8601. |
+| `total_rows` | `integer/null` | Total de linhas de dados identificado após análise. |
+
+## Estrutura de `result.progress`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `stage` | `string` | Etapa atual do processamento. |
+| `stage_label` | `string` | Descrição amigável da etapa atual. |
+| `percent` | `integer` | Percentual aproximado de andamento. |
+| `uploaded_bytes` | `integer` | Bytes recebidos. |
+| `total_bytes` | `integer` | Tamanho total recebido ou estimado. |
+| `total_rows` | `integer` | Total de linhas identificado após análise do arquivo. |
+| `processed_rows` | `integer` | Registros processados durante a execução do enriquecimento. |
+| `enriched_documents` | `integer` | Registros enriquecidos com sucesso durante a execução. |
+| `invalid_documents` | `integer` | Registros inválidos identificados durante a execução. |
+| `not_found_documents` | `integer` | Registros sem retorno encontrado durante a execução. |
+| `failed_rows` | `integer` | Registros que falharam durante a execução. |
+
+## Status comuns após upload
+
+| Status | Descrição |
+| --- | --- |
+| `validating_file` | Arquivo recebido e validação inicial em andamento. |
+| `analyzing_file` | Arquivo validado e amostra em análise. |
+| `uploading_storage` | Arquivo validado e sendo salvo no storage. |
+| `waiting_configuration` | Arquivo pronto para mapeamento e configuração do enriquecimento. |
+| `failed` | O arquivo falhou na validação ou análise. |
+
+## Erros comuns
+
+| Status HTTP | Motivo |
+| --- | --- |
+| `400` | Arquivo vazio, nome divergente, extensão inválida ou tipo de conteúdo não permitido. |
+| `401` | Assinatura ausente, inválida ou expirada. |
+| `404` | Enriquecimento vinculado à assinatura não foi localizado. |
+| `409` | O enriquecimento não está disponível para upload ou já recebeu arquivo. |
+| `413` | Arquivo acima do limite permitido. |
+| `500` | Falha inesperada ao processar o upload. |
+
+## Regras importantes
+
+- Use sempre `https://upload.lazydata.com.br/enrichment`.
+- A assinatura é temporária e deve ser usada apenas uma vez.
+- O upload deve ser feito com `multipart/form-data`.
+- O campo do arquivo deve se chamar `file`.
+- O nome e a extensão do arquivo precisam ser iguais aos informados na etapa de assinatura.
+- O retorno `202` não significa que o enriquecimento já está pronto para execução; significa que o arquivo foi recebido e a análise começou.
+- Após o upload, acompanhe o status do enriquecimento para aguardar a análise do arquivo e seguir para a configuração.

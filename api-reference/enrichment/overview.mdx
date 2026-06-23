@@ -1,0 +1,109 @@
+---
+title: "Visão geral"
+description: "Entenda o fluxo de enriquecimento via API, desde a criação até os arquivos de saída."
+sidebarTitle: "Visão geral"
+keywords: ["enriquecimento", "api enrichment", "arquivo em massa", "cpf", "cnpj", "lazy data"]
+---
+
+O **enriquecimento** permite enviar uma base de CPFs ou CNPJs, selecionar datasets e processar os registros em massa.
+
+O fluxo usa dois serviços:
+
+- **API principal**: cria, configura, executa e acompanha o enriquecimento.
+- **Serviço de upload**: recebe o arquivo de entrada em `https://upload.lazydata.com.br/enrichment`.
+
+<Info>
+  O arquivo não é enviado diretamente para a API principal. Primeiro crie o enriquecimento, depois use a assinatura retornada para enviar o arquivo no endpoint de upload.
+</Info>
+
+## Fluxo completo
+
+<Steps>
+  <Step title="Crie o enriquecimento">
+    Informe o tipo da base (`pf` ou `pj`), nome do enriquecimento e metadados do arquivo.
+  </Step>
+  <Step title="Envie o arquivo">
+    Use `upload_url` e `signature` retornados na criação para enviar o arquivo pelo serviço de upload.
+  </Step>
+  <Step title="Aguarde a análise">
+    A API identifica colunas, amostras, total de linhas e sugere a coluna de documento quando possível.
+  </Step>
+  <Step title="Configure e execute">
+    Liste os datasets disponíveis, envie a coluna de documento e informe campos adicionais para iniciar o processamento.
+  </Step>
+  <Step title="Acompanhe o status">
+    Consulte progresso, custos, erros, totais processados e arquivos de saída.
+  </Step>
+  <Step title="Baixe as saídas">
+    Gere links temporários para baixar registros enriquecidos, não encontrados, inválidos ou com falha.
+  </Step>
+</Steps>
+
+## Endpoints
+
+| Recurso | Método | Endpoint |
+| --- | --- | --- |
+| Criar enriquecimento | `POST` | `/v1/enrichment` |
+| Datasets disponíveis | `GET` | `/v1/enrichment/datasets/{target}` |
+| Listar enriquecimentos | `GET` | `/v1/enrichment` |
+| Consultar status | `GET` | `/v1/enrichment/{enrichment_id}` |
+| Configurar e executar | `POST` | `/v1/enrichment/{enrichment_id}/start` |
+| Baixar saída | `GET` | `/v1/enrichment/{enrichment_id}/outputs/{output_type}` |
+| Upload do arquivo | `POST` | `https://upload.lazydata.com.br/enrichment` |
+
+## Tipos de enriquecimento
+
+| Tipo | Descrição |
+| --- | --- |
+| `pf` | Base com CPFs. |
+| `pj` | Base com CNPJs. |
+
+## Status principais
+
+| Status | Descrição |
+| --- | --- |
+| `waiting_upload` | Enriquecimento criado e aguardando upload do arquivo. |
+| `receiving_upload` | Arquivo sendo recebido pelo serviço de upload. |
+| `validating_file` | Arquivo recebido e validação inicial em andamento. |
+| `analyzing_file` | Arquivo em análise para identificação de colunas e amostras. |
+| `waiting_configuration` | Arquivo validado e pronto para configuração. |
+| `reserving_balance` | Valor estimado sendo reservado antes da execução. |
+| `queued` | Enriquecimento na fila de processamento. |
+| `processing` | Registros em processamento. |
+| `uploading_outputs` | Arquivos finais sendo enviados para storage. |
+| `completed` | Processamento finalizado. |
+| `completed_with_errors` | Processamento finalizado com algumas falhas. |
+| `failed` | Enriquecimento falhou. |
+
+## Saídas disponíveis
+
+| Tipo | Arquivo | Descrição |
+| --- | --- | --- |
+| `success` | `registros_enriquecidos.csv` | Registros enriquecidos com sucesso. |
+| `not_found` | `nao_encontrados.csv` | Registros sem retorno nos datasets selecionados. |
+| `failed` | `falhas.csv` | Registros com falha de processamento. |
+| `invalid` | `documentos_invalidos.csv` | Registros ignorados por documento inválido. |
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Criar enriquecimento" icon="plus" href="/api-reference/enrichment/create">
+    Crie o registro e gere a assinatura de upload.
+  </Card>
+
+  <Card title="Datasets disponíveis" icon="database" href="/api-reference/enrichment/datasets">
+    Liste datasets PF/PJ habilitados para processamento em massa.
+  </Card>
+
+  <Card title="Upload do arquivo" icon="cloud-arrow-up" href="/api-reference/upload/enrichment">
+    Envie o arquivo para `upload.lazydata.com.br`.
+  </Card>
+
+  <Card title="Configurar e executar" icon="play" href="/api-reference/enrichment/start">
+    Selecione coluna, datasets e inicie o processamento.
+  </Card>
+
+  <Card title="Arquivos de saída" icon="download" href="/api-reference/enrichment/outputs">
+    Gere links temporários para baixar os resultados.
+  </Card>
+</Columns>

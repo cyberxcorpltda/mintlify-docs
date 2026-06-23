@@ -1,0 +1,162 @@
+---
+title: "Busca por telefone"
+description: "Busque pessoas jurídicas vinculadas a um telefone com DDD."
+sidebarTitle: "Busca por telefone"
+api: "POST /v1/search/company/phone"
+playground: "interactive"
+---
+
+Executa uma busca paginada de pessoa jurídica a partir de um telefone com DDD.
+
+Use esta rota quando você possui um telefone e precisa localizar possíveis empresas relacionadas a ele.
+
+<ResponseExample>
+
+```json 200
+{
+  "code": 200,
+  "message": "Consulta realizada com sucesso.",
+  "result": {
+    "items": [
+      {
+        "taxid": "00.000.000/0000-00",
+        "name": "EMPRESA EXEMPLO LTDA",
+        "location": "São Paulo/SP",
+        "status": "ATIVA",
+        "activity_start_date": "2020-01-15"
+      }
+    ],
+    "has_more": false,
+    "page": 1,
+    "price": 0.09,
+    "charged": 0.09,
+    "debit_only_if_found": false,
+    "time": 0.42,
+    "test": false
+  }
+}
+```
+
+```json 400
+{
+  "code": 400,
+  "message": "Um ou mais parâmetros informados são inválidos."
+}
+```
+
+```json 401
+{
+  "code": 401,
+  "message": "Credencial da API inválida."
+}
+```
+
+```json 403
+{
+  "code": 403,
+  "message": "A credencial da API não possui permissão para este recurso."
+}
+```
+
+</ResponseExample>
+
+## Corpo da requisição
+
+<ParamField body="phone" type="string" required placeholder="1133334444">
+  Telefone com DDD. Pontuação é aceita e removida automaticamente.
+</ParamField>
+
+<ParamField body="page" default="1" type="integer">
+  Página dos resultados. Use a próxima página enquanto `has_more` for `true`.
+</ParamField>
+
+<ParamField header="x-ambient" type="string" placeholder="sandbox">
+  Use `sandbox` para executar uma chamada de teste sem consumo de saldo.
+</ParamField>
+
+<Note>
+  Para detalhes sobre chamadas de teste, consulte [Ambiente de teste](/quickstart/sandbox).
+</Note>
+
+## Regras do telefone
+
+O telefone deve conter DDD e 10 ou 11 dígitos após normalização.
+
+O prefixo internacional `55` é aceito e removido automaticamente quando informado.
+
+## Exemplo de corpo
+
+```json
+{
+  "phone": "1133334444",
+  "page": 1
+}
+```
+
+## Resposta
+
+<ResponseField name="code" type="integer" required>
+  Código da resposta da API.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Mensagem descritiva da resposta.
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  Objeto principal com os registros encontrados, dados de paginação, cobrança e tempo de execução.
+</ResponseField>
+
+## Estrutura de `result`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `items` | `array<object>` | Registros encontrados para o telefone informado. |
+| `has_more` | `boolean` | Indica se existe próxima página disponível. |
+| `page` | `integer` | Página retornada. |
+| `price` | `number` | Preço da busca para a conta autenticada. |
+| `charged` | `number` | Valor debitado nesta chamada. Em sandbox, retorna `0`. |
+| `debit_only_if_found` | `boolean` | Indica se a cobrança ocorre apenas quando houver resultado útil. |
+| `time` | `number` | Tempo de execução em segundos. |
+| `test` | `boolean` | Indica se a chamada foi executada em ambiente de teste. |
+
+## Estrutura de `result.items[]`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `taxid` | `string` | CNPJ encontrado. |
+| `name` | `string` | Razão social. |
+| `location` | `string` | Localização resumida, quando disponível. |
+| `status` | `string` | Situação cadastral. |
+| `activity_start_date` | `string` | Data de abertura ou início de atividade no formato `yyyy-mm-dd`, quando disponível. |
+
+<Warning>
+  Campos de `items[]` podem não ser retornados em todas as consultas. A disponibilidade depende do telefone informado e dos dados existentes para os registros encontrados.
+</Warning>
+
+## Paginação
+
+Quando `has_more` retornar `true`, envie a mesma requisição incrementando `page`.
+
+```json
+{
+  "phone": "1133334444",
+  "page": 2
+}
+```
+
+## Respostas esperadas
+
+| Status | Quando ocorre |
+| --- | --- |
+| `200` | Busca executada com sucesso. |
+| `400` | Requisição inválida, telefone ausente ou telefone em formato incompatível. |
+| `401` | A chave da API está ausente, inválida ou não pôde ser autenticada. |
+| `403` | A credencial não possui escopo de consulta, o plano não permite acesso ou há bloqueio financeiro. |
+
+## Fluxo recomendado
+
+1. Informe o telefone com DDD.
+2. Leia `items` e verifique `has_more`.
+3. Se `has_more` for `true`, consulte a próxima página.
+4. Use `x-ambient: sandbox` para validar integração sem consumir saldo.
