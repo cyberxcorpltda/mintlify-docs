@@ -1,0 +1,192 @@
+---
+title: "Webhook de enriquecimento"
+keywords: ["webhook", "enriquecimento", "enrichment", "upload", "processamento", "lazy data"]
+description: "Eventos e payloads enviados pelo escopo de enriquecimento."
+sidebarTitle: "Enriquecimento"
+---
+
+O escopo `enrichment` envia eventos do fluxo de enriquecimento em massa, desde a criação até a conclusão ou falha.
+
+Use este webhook para acompanhar upload, análise do arquivo, fila, processamento, progresso final e disponibilidade de saídas.
+
+<Card title="Visão geral de webhooks" icon="webhook" horizontal href="/webhook/overview">
+  Consulte o contrato base, headers, assinatura e recomendações gerais de entrega.
+</Card>
+
+## Eventos disponíveis
+
+| Evento | Quando é enviado |
+| --- | --- |
+| `enrichment.created` | Enriquecimento criado e aguardando upload. |
+| `enrichment.file_uploaded` | Arquivo enviado e recebido pela Lazy Data. |
+| `enrichment.file_ready` | Arquivo analisado e pronto para configuração. |
+| `enrichment.queued` | Enriquecimento enviado para a fila. |
+| `enrichment.processing` | Processamento iniciado. |
+| `enrichment.completed` | Processamento finalizado. |
+| `enrichment.failed` | Enriquecimento falhou. |
+
+<Note>
+  Se o processamento terminar com falhas parciais, o evento continua sendo `enrichment.completed`. O status real aparece em `data.enrichment.status`.
+</Note>
+
+## Payload base
+
+Exemplo de enriquecimento concluído:
+
+```json
+{
+  "id": "evt_fa7d5f6d-9d85-40d3-945f-2124c31e00f1",
+  "event": "enrichment.completed",
+  "scope": "enrichment",
+  "created_at": "2026-06-23T12:05:00Z",
+  "data": {
+    "enrichment": {
+      "id": "enr_9fcb573b",
+      "type": "pf",
+      "name": "Base de clientes",
+      "status": "completed",
+      "file": {
+        "id": "file_9fcb573b",
+        "name": "clientes.csv",
+        "extension": "csv",
+        "content_type": "text/csv",
+        "size": 73422,
+        "uploaded_at": "2026-06-23T12:00:00Z",
+        "total_rows": 1000
+      },
+      "progress": {
+        "stage": "completed",
+        "percent": 100,
+        "total_rows": 1000,
+        "processed_rows": 1000,
+        "enriched_documents": 940,
+        "invalid_documents": 10,
+        "not_found_documents": 40,
+        "failed_rows": 10
+      },
+      "cost": {
+        "estimated": 10,
+        "reserved": 10,
+        "consumed": 9.4,
+        "refunded": 0.6
+      },
+      "outputs": {
+        "success": {
+          "available": true,
+          "rows": 940,
+          "size": 41280
+        }
+      },
+      "created_at": "2026-06-23T11:59:30Z",
+      "last_updated_at": "2026-06-23T12:05:00Z"
+    }
+  }
+}
+```
+
+## Campos de `data.enrichment`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | ID do enriquecimento. |
+| `type` | `string` | Tipo do enriquecimento, como `pf` ou `pj`. |
+| `name` | `string` | Nome definido para o enriquecimento. |
+| `status` | `string` | Status técnico atual. |
+| `file` | `object` | Informações do arquivo enviado. |
+| `progress` | `object` | Progresso consolidado do processamento. |
+| `cost` | `object` | Valores estimados, reservados, consumidos e estornados. |
+| `outputs` | `object` | Arquivos de saída disponíveis por tipo. |
+| `created_at` | `string` | Data de criação em ISO 8601. |
+| `last_updated_at` | `string` | Data da última atualização em ISO 8601. |
+
+## Campo `file`
+
+| Campo | Descrição |
+| --- | --- |
+| `id` | ID interno do arquivo. |
+| `name` | Nome original ou normalizado do arquivo. |
+| `extension` | Extensão do arquivo. |
+| `content_type` | MIME type identificado. |
+| `size` | Tamanho em bytes. |
+| `uploaded_at` | Data de upload em ISO 8601. |
+| `total_rows` | Quantidade de linhas detectadas. |
+
+## Campo `progress`
+
+| Campo | Descrição |
+| --- | --- |
+| `stage` | Etapa atual ou final do processamento. |
+| `percent` | Percentual consolidado. |
+| `total_rows` | Total de linhas a processar. |
+| `processed_rows` | Linhas já processadas. |
+| `enriched_documents` | Documentos enriquecidos com sucesso. |
+| `invalid_documents` | Documentos inválidos. |
+| `not_found_documents` | Documentos não encontrados. |
+| `failed_rows` | Linhas com falha técnica. |
+
+## Exemplo de falha
+
+```json
+{
+  "id": "evt_c8e9eb31-0f70-4d0f-a5e8-e82f0c8fd7c8",
+  "event": "enrichment.failed",
+  "scope": "enrichment",
+  "created_at": "2026-06-23T12:03:00Z",
+  "data": {
+    "enrichment": {
+      "id": "enr_9fcb573b",
+      "type": "pf",
+      "name": "Base de clientes",
+      "status": "failed",
+      "file": {
+        "id": "file_9fcb573b",
+        "name": "clientes.csv",
+        "extension": "csv",
+        "content_type": "text/csv",
+        "size": 73422,
+        "uploaded_at": "2026-06-23T12:00:00Z",
+        "total_rows": 1000
+      },
+      "progress": {
+        "stage": "failed",
+        "percent": 20,
+        "total_rows": 1000,
+        "processed_rows": 200,
+        "enriched_documents": 180,
+        "invalid_documents": 5,
+        "not_found_documents": 10,
+        "failed_rows": 5
+      },
+      "cost": {
+        "estimated": 10,
+        "reserved": 10,
+        "consumed": 1.8,
+        "refunded": 8.2
+      },
+      "outputs": {},
+      "created_at": "2026-06-23T11:59:30Z",
+      "last_updated_at": "2026-06-23T12:03:00Z"
+    }
+  }
+}
+```
+
+## Como consumir
+
+1. Use `event` para diferenciar etapas do fluxo.
+2. Use `data.enrichment.id` para buscar detalhes no painel ou API.
+3. Em `enrichment.completed`, leia `data.enrichment.status` para identificar conclusão normal ou com falhas parciais.
+4. Use `outputs.*.available` para saber se uma saída já pode ser acessada.
+5. Evite disparar processos pesados para eventos intermediários, como `file_uploaded`, se você só precisa do resultado final.
+
+## Relacionado
+
+<Columns cols={2}>
+  <Card title="Visão geral" icon="webhook" href="/webhook/overview">
+    Contrato base de webhooks.
+  </Card>
+
+  <Card title="Enriquecimento" icon="layer-group" href="/enrichment/overview">
+    Entenda o fluxo completo de enriquecimento.
+  </Card>
+</Columns>

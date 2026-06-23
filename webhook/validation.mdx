@@ -1,0 +1,185 @@
+---
+title: "Webhook de validações"
+keywords: ["webhook", "validações", "validation", "validação facial", "validação cadastral", "lazy data"]
+description: "Eventos e payloads enviados pelo escopo de validações."
+sidebarTitle: "Validações"
+---
+
+O escopo `validation` envia eventos de validações reais executadas pela Lazy Data.
+
+Use este webhook para receber o resultado de validações faciais e cadastrais sem depender apenas da resposta imediata da chamada.
+
+<Card title="Visão geral de webhooks" icon="webhook" horizontal href="/webhook/overview">
+  Consulte o contrato base, headers, assinatura e recomendações gerais de entrega.
+</Card>
+
+## Eventos disponíveis
+
+| Evento | Quando é enviado |
+| --- | --- |
+| `validation.completed` | Validação real concluída com sucesso. |
+| `validation.failed` | Validação real falhou após tentativa de execução. |
+
+<Info>
+  Chamadas de teste, dados inválidos antes da execução e erros de autenticação ou saldo não geram webhook de validação.
+</Info>
+
+## Payload de conclusão
+
+Exemplo de validação facial concluída:
+
+```json
+{
+  "id": "evt_9a47f451-11dc-4fd6-b4b4-6f15ee4d5530",
+  "event": "validation.completed",
+  "scope": "validation",
+  "created_at": "2026-06-23T12:10:00Z",
+  "data": {
+    "validation": {
+      "id": "face_comparison",
+      "name": "Comparação facial",
+      "type": "facial"
+    },
+    "status": "completed",
+    "result": {
+      "id": "f21c0b97-29e0-4eb9-b0c1-d2f55ef625d5",
+      "status": "completed",
+      "test": false,
+      "cost": {
+        "total": 0.2,
+        "charged": 0.2,
+        "refunded": 0
+      },
+      "timing": {
+        "total": 1.42
+      },
+      "comparison": {
+        "match": true,
+        "similarity": 98.4,
+        "threshold": 80
+      }
+    }
+  }
+}
+```
+
+Exemplo de validação cadastral concluída:
+
+```json
+{
+  "id": "evt_4692f71c-67dc-40f9-ad2d-ff6dc767db68",
+  "event": "validation.completed",
+  "scope": "validation",
+  "created_at": "2026-06-23T12:12:00Z",
+  "data": {
+    "validation": {
+      "id": "registration_validation",
+      "name": "Validação cadastral",
+      "type": "registration"
+    },
+    "status": "completed",
+    "result": {
+      "id": "1959c8bc-26c2-477e-bf8f-bcd05f4ff1af",
+      "status": "completed",
+      "test": false,
+      "validation": {
+        "id": "registration_validation",
+        "name": "Validação cadastral",
+        "type": "registration"
+      },
+      "cost": {
+        "total": 0.15,
+        "charged": 0.15,
+        "refunded": 0
+      },
+      "timing": {
+        "total": 0.74
+      },
+      "registration": {
+        "valid": true,
+        "document": "00000000000",
+        "model": "pf"
+      }
+    }
+  }
+}
+```
+
+## Payload de falha
+
+```json
+{
+  "id": "evt_f62f6057-29de-4e4d-8516-58be04822102",
+  "event": "validation.failed",
+  "scope": "validation",
+  "created_at": "2026-06-23T12:13:00Z",
+  "data": {
+    "validation": {
+      "id": "face_comparison",
+      "name": "Comparação facial",
+      "type": "facial"
+    },
+    "status": "failed",
+    "cost": {
+      "charged": 0.2,
+      "refunded": 0.2
+    },
+    "error": {
+      "code": 43002,
+      "message": "Não foi possível detectar face em uma das imagens."
+    }
+  }
+}
+```
+
+## Campos de `data`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `validation` | `object` | Identificação da validação executada. |
+| `status` | `string` | `completed` ou `failed`. |
+| `result` | `object` | Resultado retornado pela validação, quando concluída. |
+| `cost` | `object` | Valor cobrado e estornado, quando a validação falha após cobrança. |
+| `error` | `object` | Código e mensagem da falha, quando ocorrer. |
+
+## Campo `validation`
+
+| Campo | Descrição |
+| --- | --- |
+| `id` | ID da validação. |
+| `name` | Nome público da validação. |
+| `type` | Tipo da validação. |
+
+## Quando não há webhook
+
+Webhooks de validação não são enviados para:
+
+- chamadas em modo de teste;
+- CPF ou CNPJ inválido antes da execução real;
+- imagem malformada antes da execução real;
+- falta de permissão, saldo, plano ou autenticação;
+- falha de cobrança antes da chamada ao provedor.
+
+<Note>
+  Quando a validação falha depois de iniciar a execução real, a Lazy Data envia `validation.failed` e informa o estorno em `data.cost.refunded`, quando aplicável.
+</Note>
+
+## Como consumir
+
+1. Valide o header `X-LazyData-Webhook-Signature`.
+2. Use `data.validation.id` para rotear regras por tipo de validação.
+3. Em `validation.completed`, leia `data.result`.
+4. Em `validation.failed`, leia `data.error` e `data.cost`.
+5. Use `id` do envelope para idempotência.
+
+## Relacionado
+
+<Columns cols={2}>
+  <Card title="Visão geral" icon="webhook" href="/webhook/overview">
+    Contrato base de webhooks.
+  </Card>
+
+  <Card title="Validações" icon="shield-check" href="/validation/overview">
+    Entenda os tipos de validação disponíveis.
+  </Card>
+</Columns>

@@ -1,0 +1,183 @@
+---
+title: "Webhook de armazenamento"
+keywords: ["webhook", "armazenamento", "storage", "arquivos", "pastas", "lazy data"]
+description: "Eventos e payloads enviados pelo escopo de armazenamento."
+sidebarTitle: "Armazenamento"
+---
+
+O escopo `storage` envia eventos de arquivos e pastas no armazenamento da conta.
+
+Use este webhook para sincronizar criação de pastas, criação de registros de arquivo, upload concluído, renomeação, exclusão e falhas de exclusão.
+
+<Card title="Visão geral de webhooks" icon="webhook" horizontal href="/webhook/overview">
+  Consulte o contrato base, headers, assinatura e recomendações gerais de entrega.
+</Card>
+
+## Eventos disponíveis
+
+| Evento | Quando é enviado |
+| --- | --- |
+| `storage.folder.created` | Pasta criada. |
+| `storage.folder.renamed` | Pasta renomeada. |
+| `storage.folder.deleted` | Pasta excluída. |
+| `storage.folder.delete_failed` | Exclusão de pasta falhou parcial ou totalmente. |
+| `storage.file.created` | Registro de arquivo criado e aguardando upload. |
+| `storage.file.uploaded` | Arquivo enviado e armazenado com sucesso. |
+| `storage.file.renamed` | Arquivo renomeado. |
+| `storage.file.deleted` | Arquivo excluído. |
+| `storage.file.delete_failed` | Exclusão de arquivo falhou. |
+
+<Note>
+  `storage.file.created` indica que a assinatura de upload foi gerada e o registro está aguardando envio. O arquivo só está disponível após `storage.file.uploaded`.
+</Note>
+
+## Payload de arquivo enviado
+
+```json
+{
+  "id": "evt_71fdf700-e01b-458c-bdbc-f53607f5d75e",
+  "event": "storage.file.uploaded",
+  "scope": "storage",
+  "created_at": "2026-06-23T12:30:00Z",
+  "data": {
+    "item": {
+      "id": "file_9fcb573b",
+      "type": "file",
+      "name": "contrato.pdf",
+      "parent_id": "folder_a879e42a",
+      "extension": "pdf",
+      "content_type": "application/pdf",
+      "size": 842100,
+      "status": "uploaded",
+      "uploaded_at": "2026-06-23T12:30:00Z",
+      "created_at": "2026-06-23T12:29:30Z",
+      "updated_at": "2026-06-23T12:30:00Z"
+    }
+  }
+}
+```
+
+## Payload de pasta criada
+
+```json
+{
+  "id": "evt_17ef15ef-033d-4f68-99c8-4d98dd744ed9",
+  "event": "storage.folder.created",
+  "scope": "storage",
+  "created_at": "2026-06-23T12:28:00Z",
+  "data": {
+    "item": {
+      "id": "folder_a879e42a",
+      "type": "folder",
+      "name": "Contratos",
+      "parent_id": null,
+      "created_at": "2026-06-23T12:28:00Z",
+      "updated_at": "2026-06-23T12:28:00Z"
+    }
+  }
+}
+```
+
+## Campos de `data.item`
+
+Campos comuns:
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | ID do item. |
+| `type` | `string` | `file` ou `folder`. |
+| `name` | `string` | Nome do item. |
+| `parent_id` | `string` ou `null` | ID da pasta pai. |
+| `created_at` | `string` | Data de criação em ISO 8601. |
+| `updated_at` | `string` | Data da última atualização em ISO 8601. |
+
+Campos adicionais para arquivos:
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `extension` | `string` | Extensão do arquivo. |
+| `content_type` | `string` | MIME type do arquivo. |
+| `size` | `integer` | Tamanho em bytes. |
+| `status` | `string` | Status do arquivo. |
+| `uploaded_at` | `string` | Data de upload, quando disponível. |
+
+## Campos extras por evento
+
+| Evento | Campos extras |
+| --- | --- |
+| `storage.folder.renamed` | `old_name`, `new_name`. |
+| `storage.file.renamed` | `old_name`, `new_name`. |
+| `storage.folder.deleted` | `files_count`, `failed_files_count`. |
+| `storage.folder.delete_failed` | `files_count`, `failed_files_count`. |
+| `storage.file.deleted` | `failed_keys_count`. |
+| `storage.file.delete_failed` | `failed_keys_count`. |
+
+## Exemplo de renomeação
+
+```json
+{
+  "id": "evt_13e3d6a5-3ed6-4453-9b77-42c66d6c8bdf",
+  "event": "storage.folder.renamed",
+  "scope": "storage",
+  "created_at": "2026-06-23T12:31:00Z",
+  "data": {
+    "item": {
+      "id": "folder_a879e42a",
+      "type": "folder",
+      "name": "Contratos 2026",
+      "parent_id": null,
+      "created_at": "2026-06-23T12:28:00Z",
+      "updated_at": "2026-06-23T12:31:00Z"
+    },
+    "old_name": "Contratos",
+    "new_name": "Contratos 2026"
+  }
+}
+```
+
+## Exemplo de falha de exclusão
+
+```json
+{
+  "id": "evt_6429e6bc-1360-48a8-aabf-6be125f084b0",
+  "event": "storage.folder.delete_failed",
+  "scope": "storage",
+  "created_at": "2026-06-23T12:40:00Z",
+  "data": {
+    "item": {
+      "id": "folder_a879e42a",
+      "type": "folder",
+      "name": "Contratos 2026",
+      "parent_id": null,
+      "created_at": "2026-06-23T12:28:00Z",
+      "updated_at": "2026-06-23T12:40:00Z"
+    },
+    "files_count": 12,
+    "failed_files_count": 1
+  }
+}
+```
+
+## Como consumir
+
+1. Use `data.item.id` e `data.item.type` para correlacionar o item.
+2. Trate `storage.file.created` como estado de preparação de upload.
+3. Trate `storage.file.uploaded` como confirmação de arquivo disponível.
+4. Em eventos de renomeação, use `old_name` e `new_name`.
+5. Em falhas de exclusão, revise os contadores e consulte o painel se precisar de detalhe operacional.
+
+<Warning>
+  O webhook não inclui link público do arquivo. Use os endpoints ou telas de armazenamento para acessar ou baixar arquivos conforme as permissões da conta.
+</Warning>
+
+## Relacionado
+
+<Columns cols={2}>
+  <Card title="Visão geral" icon="webhook" href="/webhook/overview">
+    Contrato base de webhooks.
+  </Card>
+
+  <Card title="Armazenamento" icon="folder-open" href="/storage/overview">
+    Entenda arquivos, pastas e upload.
+  </Card>
+</Columns>

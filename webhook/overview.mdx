@@ -1,0 +1,203 @@
+---
+title: "Webhooks"
+keywords: ["webhooks", "integrações", "eventos", "notificações", "lazy data"]
+description: "Configure endpoints para receber eventos da Lazy Data em tempo real."
+sidebarTitle: "Visão geral"
+---
+
+Os **webhooks** permitem receber eventos da Lazy Data em um endpoint da sua aplicação.
+
+Use esse recurso quando você precisa reagir automaticamente a mudanças em consultas, enriquecimentos, validações, monitoramentos ou arquivos, sem depender apenas de polling ou conferência manual no painel.
+
+No painel, acesse **Integrações \> Webhook** para cadastrar URLs de destino, escolher escopos e gerenciar a assinatura.
+
+## Quando usar
+
+Use webhooks para:
+
+- atualizar sistemas internos quando uma consulta terminar;
+- acompanhar o andamento de enriquecimentos em massa;
+- receber o resultado de validações executadas pela API;
+- reagir a novidades de monitoramento;
+- sincronizar eventos de arquivos e pastas do armazenamento.
+
+<Info>
+  Webhooks são notificações de saída. Eles não substituem os endpoints de consulta, histórico, enriquecimento, validação, monitoramento ou armazenamento.
+</Info>
+
+## Como funciona
+
+<Steps>
+  <Step title="Cadastre pelo painel">
+    No menu Webhook, informe nome, URL HTTPS de destino e os escopos que devem enviar eventos para esse webhook.
+  </Step>
+  <Step title="Receba a assinatura">
+    Depois do cadastro, a Lazy Data gera um token de assinatura para aquele webhook.
+  </Step>
+  <Step title="Valide o header">
+    Cada chamada enviada ao seu endpoint inclui o token no header `X-LazyData-Webhook-Signature`.
+  </Step>
+  <Step title="Processe o evento">
+    Leia o campo `event` para identificar o tipo do evento e o objeto `data` para acessar os dados principais.
+  </Step>
+</Steps>
+
+## Escopos disponíveis
+
+Ao cadastrar um webhook pelo painel, você seleciona escopos globais. Cada escopo envia todos os eventos relacionados ao produto correspondente.
+
+| Escopo | Menu relacionado | Quando envia eventos |
+| --- | --- | --- |
+| `search` | Consultas | Consultas síncronas, assíncronas e histórico técnico. |
+| `enrichment` | Enriquecimento | Criação, upload de arquivo, fila, processamento, conclusão e falhas. |
+| `validation` | Validações | Conclusão ou falha de validações reais. |
+| `monitoring` | Monitoramento | Criação, checagens, novidades, pausas, retomadas, cancelamentos e falhas. |
+| `storage` | Armazenamento | Criação, upload, renomeação, exclusão e falhas de exclusão de itens. |
+
+<Note>
+  Os eventos são agregados por produto. A Lazy Data não envia eventos individuais por dataset, linha de enriquecimento ou fonte interna para evitar excesso de requisições.
+</Note>
+
+## Contrato base
+
+Todos os webhooks seguem a mesma regra de entrega:
+
+- a chamada é feita com método `POST`;
+- o corpo é enviado em JSON;
+- o tipo do evento aparece no header e no campo `event`;
+- a assinatura é enviada por header;
+- o payload sempre usa o mesmo envelope base;
+- os campos específicos ficam dentro de `data`.
+
+<Info>
+  A visão geral documenta o contrato comum. Eventos, payloads e campos específicos devem ser detalhados nas páginas de cada menu do produto.
+</Info>
+
+## Headers enviados
+
+Cada webhook é enviado por `POST` para a URL cadastrada.
+
+Headers principais:
+
+| Header | Descrição |
+| --- | --- |
+| `X-LazyData-Webhook-Signature` | Token de assinatura gerado para o webhook. |
+| `X-LazyData-Webhook-Event` | Nome do evento enviado. |
+| `X-LazyData-Webhook-Id` | ID único do evento. |
+| `User-Agent` | Identificação do emissor Lazy Data. |
+
+<Warning>
+  Trate o token de assinatura como segredo. Se houver suspeita de exposição, gere uma nova assinatura no painel.
+</Warning>
+
+## Estrutura do payload
+
+Todos os eventos usam o mesmo envelope:
+
+```json
+{
+  "id": "evt_6eb3d0a8-9e75-4a3f-9b6e-8d7fb86df01a",
+  "event": "search.completed",
+  "scope": "search",
+  "created_at": "2026-06-23T12:00:00Z",
+  "data": {}
+}
+```
+
+Campos:
+
+| Campo | Descrição |
+| --- | --- |
+| `id` | Identificador único do evento. |
+| `event` | Tipo do evento. |
+| `scope` | Escopo que originou o evento. |
+| `created_at` | Data de criação do evento em ISO 8601. |
+| `data` | Objeto com dados mínimos do produto relacionado. |
+
+## Campo `data`
+
+O campo `data` varia conforme o escopo.
+
+Ele deve conter apenas dados úteis para identificar o recurso, entender o status do evento e buscar detalhes completos na API ou no painel quando necessário.
+
+Exemplos de chaves por escopo:
+
+| Escopo | Chave comum em `data` | Conteúdo esperado |
+| --- | --- | --- |
+| `search` | campos diretos | ID da consulta, tipo, status, resumo de datasets, custos e erros principais. |
+| `enrichment` | `enrichment` | ID do enriquecimento, status, arquivo, progresso, custos e saídas disponíveis. |
+| `validation` | `validation` | Tipo de validação, status, resultado ou erro. |
+| `monitoring` | `monitoring` | ID do monitoramento, alvo, status, checagens e novidade detectada. |
+| `storage` | `item` | Item afetado, tipo, nome, status e metadados básicos. |
+
+<Note>
+  Quando o evento trouxer apenas um resumo, use o ID recebido para consultar o detalhe no endpoint ou tela do produto correspondente.
+</Note>
+
+## Tutoriais por escopo
+
+Use os tutoriais específicos para ver eventos disponíveis, payloads completos, campos do objeto `data` e exemplos de tratamento por produto.
+
+<Columns cols={2}>
+  <Card title="Webhook de consultas" icon="magnifying-glass" href="/webhook/search">
+    Eventos de consultas síncronas, assíncronas, histórico e payloads de resultado.
+  </Card>
+
+  <Card title="Webhook de enriquecimento" icon="layers" href="/webhook/enrichment">
+    Eventos de upload, análise, fila, processamento, conclusão e falhas.
+  </Card>
+
+  <Card title="Webhook de validações" icon="shield-check" href="/webhook/validation">
+    Eventos de validação facial, validação cadastral, conclusão e falhas.
+  </Card>
+
+  <Card title="Webhook de monitoramento" icon="bell" href="/webhook/monitoring">
+    Eventos de checagem, novidade detectada, pausa, retomada e cancelamento.
+  </Card>
+
+  <Card title="Webhook de armazenamento" icon="folder-open" href="/webhook/storage">
+    Eventos de pastas, arquivos, upload, renomeação, exclusão e falhas.
+  </Card>
+</Columns>
+
+## Tempo de resposta
+
+O envio do webhook é executado em background e não bloqueia a operação principal.
+
+A requisição para o endpoint cadastrado possui timeout de `30` segundos.
+
+Se houver mais de um webhook cadastrado para o mesmo escopo, a Lazy Data envia o evento para todos os endpoints ativos daquele escopo.
+
+## Boas práticas
+
+- use uma URL HTTPS pública e estável;
+- responda rapidamente com status `2xx`;
+- valide o header `X-LazyData-Webhook-Signature`;
+- use o campo `id` para idempotência;
+- não dependa da ordem absoluta entre eventos de produtos diferentes;
+- armazene apenas os dados necessários para auditoria;
+- busque detalhes completos pela API quando o payload do webhook trouxer apenas resumo.
+
+## Próximos passos
+
+<Columns cols={2}>
+  <Card title="Consultas" icon="magnifying-glass" href="/webhook/search">
+    Veja eventos e payloads de consultas.
+  </Card>
+
+  <Card title="Enriquecimento" icon="layer-group" href="/webhook/enrichment">
+    Veja eventos e payloads de enriquecimento.
+  </Card>
+
+  <Card title="Validações" icon="shield-check" href="/webhook/validation">
+    Veja eventos e payloads de validações.
+  </Card>
+
+  <Card title="Monitoramento" icon="bell" href="/webhook/monitoring">
+    Veja eventos e payloads de monitoramento.
+  </Card>
+
+  <Card title="Armazenamento" icon="folder-open" href="/webhook/storage">
+    Veja eventos e payloads de armazenamento.
+  </Card>
+</Columns>

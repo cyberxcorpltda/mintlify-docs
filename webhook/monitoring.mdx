@@ -1,0 +1,181 @@
+---
+title: "Webhook de monitoramento"
+keywords: ["webhook", "monitoramento", "monitoring", "checagem", "novidade", "lazy data"]
+description: "Eventos e payloads enviados pelo escopo de monitoramento."
+sidebarTitle: "Monitoramento"
+---
+
+O escopo `monitoring` envia eventos do ciclo de vida de monitoramentos e das checagens recorrentes.
+
+Use este webhook para reagir a monitoramentos criados, checagens executadas, novidades detectadas, pausas, retomadas e cancelamentos.
+
+<Card title="Visão geral de webhooks" icon="webhook" horizontal href="/webhook/overview">
+  Consulte o contrato base, headers, assinatura e recomendações gerais de entrega.
+</Card>
+
+## Eventos disponíveis
+
+| Evento | Quando é enviado |
+| --- | --- |
+| `monitoring.created` | Monitoramento criado. |
+| `monitoring.checked` | Checagem executada. |
+| `monitoring.event_detected` | Novidade detectada. |
+| `monitoring.check_failed` | Uma checagem falhou. |
+| `monitoring.paused` | Monitoramento pausado. |
+| `monitoring.resumed` | Monitoramento retomado automaticamente. |
+| `monitoring.canceled` | Monitoramento cancelado. |
+
+## Payload base
+
+Exemplo de novidade detectada:
+
+```json
+{
+  "id": "evt_2d3b6ab7-b80a-4d12-94cb-622af2abfd5e",
+  "event": "monitoring.event_detected",
+  "scope": "monitoring",
+  "created_at": "2026-06-23T12:20:00Z",
+  "data": {
+    "monitoring": {
+      "id": "mon_9fcb573b",
+      "name": "Processo principal",
+      "type": "process",
+      "status": "active",
+      "target": {
+        "type": "process",
+        "label": "0000000-00.0000.0.00.0000",
+        "process_number": "0000000-00.0000.0.00.0000",
+        "court": "TJSP"
+      },
+      "sources_count": 1,
+      "checks_count": 4,
+      "events_count": 1,
+      "last_checked_at": "2026-06-23T12:20:00Z",
+      "next_check_at": "2026-06-24T12:20:00Z",
+      "created_at": "2026-06-20T09:00:00Z"
+    },
+    "event_id": "mev_8f3eb8d2",
+    "movements_count": 2
+  }
+}
+```
+
+## Campos de `data.monitoring`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `string` | ID do monitoramento. |
+| `name` | `string` | Nome definido para o monitoramento. |
+| `type` | `string` | Tipo do monitoramento, como `process`, `pf` ou `pj`. |
+| `status` | `string` | Status atual. |
+| `target` | `object` | Alvo monitorado. |
+| `sources_count` | `integer` | Quantidade de fontes configuradas. |
+| `checks_count` | `integer` | Quantidade de checagens executadas. |
+| `events_count` | `integer` | Quantidade de novidades registradas. |
+| `last_checked_at` | `string` | Data da última checagem. |
+| `next_check_at` | `string` | Próxima checagem prevista. |
+| `created_at` | `string` | Data de criação. |
+
+## Campos extras por evento
+
+Além de `monitoring`, alguns eventos incluem campos extras no `data`.
+
+| Evento | Campos extras comuns |
+| --- | --- |
+| `monitoring.created` | `initial_check_completed`, `initial_check_queued`, `initial_event_id`, `initial_email_sent`. |
+| `monitoring.checked` | `run_id`, `sources_checked`, `failed_sources_count`, `changes_count`, `movements_count`. |
+| `monitoring.event_detected` | `event_id`, `changes_count`, `movements_count`. |
+| `monitoring.check_failed` | `failed_sources_count`, `error`, `retry_count`, `consecutive_failures`. |
+| `monitoring.paused` | `reason`. |
+| `monitoring.resumed` | Sem campos extras obrigatórios. |
+| `monitoring.canceled` | Sem campos extras obrigatórios. |
+
+## Exemplo de checagem executada
+
+```json
+{
+  "id": "evt_12cbf3d4-268a-4ee5-8b19-6dba83c403fa",
+  "event": "monitoring.checked",
+  "scope": "monitoring",
+  "created_at": "2026-06-23T12:20:00Z",
+  "data": {
+    "monitoring": {
+      "id": "mon_9fcb573b",
+      "name": "CPF monitorado",
+      "type": "pf",
+      "status": "active",
+      "target": {
+        "type": "pf",
+        "label": "CLIENTE EXEMPLO",
+        "name": "CLIENTE EXEMPLO",
+        "tax_id": "00000000000"
+      },
+      "sources_count": 3,
+      "checks_count": 8,
+      "events_count": 0,
+      "last_checked_at": "2026-06-23T12:20:00Z",
+      "next_check_at": "2026-06-24T12:20:00Z",
+      "created_at": "2026-06-15T09:00:00Z"
+    },
+    "run_id": "run_c01873f1",
+    "sources_checked": 3,
+    "failed_sources_count": 0,
+    "changes_count": 0
+  }
+}
+```
+
+## Exemplo de pausa
+
+```json
+{
+  "id": "evt_887ca28c-d206-48db-a8c1-63a610dfb446",
+  "event": "monitoring.paused",
+  "scope": "monitoring",
+  "created_at": "2026-06-23T12:25:00Z",
+  "data": {
+    "monitoring": {
+      "id": "mon_9fcb573b",
+      "name": "Processo principal",
+      "type": "process",
+      "status": "paused_insufficient_balance",
+      "target": {
+        "type": "process",
+        "label": "0000000-00.0000.0.00.0000",
+        "process_number": "0000000-00.0000.0.00.0000"
+      },
+      "sources_count": 1,
+      "checks_count": 4,
+      "events_count": 1,
+      "last_checked_at": "2026-06-23T12:20:00Z",
+      "next_check_at": "2026-06-24T12:20:00Z",
+      "created_at": "2026-06-20T09:00:00Z"
+    },
+    "reason": "Saldo insuficiente para executar a checagem."
+  }
+}
+```
+
+## Como consumir
+
+1. Use `data.monitoring.id` para correlacionar o monitoramento.
+2. Use `event` para separar ciclo de vida, checagens e novidades.
+3. Em `monitoring.event_detected`, busque o detalhe do evento pelo painel ou API quando precisar do conteúdo completo.
+4. Em `monitoring.paused`, trate `reason` como explicação operacional.
+5. Em `monitoring.checked`, não assuma que houve novidade. Use `changes_count` ou `movements_count`.
+
+<Note>
+  O payload de monitoramento é resumido. Ele informa a ocorrência e os contadores principais; detalhes completos de mudanças ou movimentos devem ser consultados pelo produto de monitoramento.
+</Note>
+
+## Relacionado
+
+<Columns cols={2}>
+  <Card title="Visão geral" icon="webhook" href="/webhook/overview">
+    Contrato base de webhooks.
+  </Card>
+
+  <Card title="Monitoramento" icon="bell" href="/monitoring/overview">
+    Entenda checagens recorrentes e novidades.
+  </Card>
+</Columns>

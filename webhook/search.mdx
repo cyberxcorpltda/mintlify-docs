@@ -1,0 +1,177 @@
+---
+title: "Webhook de consultas"
+keywords: ["webhook", "consultas", "search", "assíncrono", "síncrono", "lazy data"]
+description: "Eventos e payloads enviados pelo escopo de consultas."
+sidebarTitle: "Consultas"
+---
+
+O escopo `search` envia eventos relacionados a consultas síncronas, consultas assíncronas e histórico técnico.
+
+Use este webhook para atualizar seu sistema quando uma consulta for criada, iniciar processamento, finalizar ou falhar.
+
+<Card title="Visão geral de webhooks" icon="webhook" horizontal href="/webhook/overview">
+  Consulte o contrato base, headers, assinatura e recomendações gerais de entrega.
+</Card>
+
+## Eventos disponíveis
+
+| Evento | Quando é enviado |
+| --- | --- |
+| `search.queued` | Consulta assíncrona criada e aguardando processamento. |
+| `search.processing` | Consulta assíncrona começou a ser processada. |
+| `search.completed` | Consulta síncrona ou assíncrona finalizada. |
+| `search.failed` | Consulta finalizada com falha geral. |
+
+<Note>
+  Quando a consulta termina como `completed_with_errors`, o evento enviado também é `search.completed`. A diferença aparece em `data.status`.
+</Note>
+
+## Fluxo de envio
+
+Consultas síncronas normalmente geram apenas um evento final:
+
+```text
+search.completed
+```
+
+Consultas assíncronas podem gerar mais de um evento:
+
+```text
+search.queued -> search.processing -> search.completed
+```
+
+Em caso de falha geral:
+
+```text
+search.queued -> search.processing -> search.failed
+```
+
+## Payload base
+
+Exemplo de consulta concluída:
+
+```json
+{
+  "id": "evt_6eb3d0a8-9e75-4a3f-9b6e-8d7fb86df01a",
+  "event": "search.completed",
+  "scope": "search",
+  "created_at": "2026-06-23T12:00:00Z",
+  "data": {
+    "search_id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "target": "person",
+    "status": "completed",
+    "query": {
+      "taxid": "00000000000",
+      "datasets": ["person_basic_data"],
+      "additional": {}
+    },
+    "summary": {
+      "datasets_total": 1,
+      "datasets_queued": 0,
+      "datasets_processing": 0,
+      "datasets_completed": 1,
+      "datasets_failed": 0
+    },
+    "cost": {
+      "total": 0.05,
+      "refunded": 0
+    },
+    "timing": {
+      "total": 0.83
+    }
+  }
+}
+```
+
+## Campos de `data`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `search_id` | `string` | ID do histórico da consulta. |
+| `target` | `string` | Tipo público da consulta: `person`, `company`, `process` ou `vehicle`. |
+| `status` | `string` | Status técnico da consulta no momento do evento. |
+| `query` | `object` | Parâmetros usados na consulta. |
+| `summary` | `object` | Resumo de status dos datasets solicitados. |
+| `cost` | `object` | Total debitado e valor estornado, quando disponível. |
+| `timing` | `object` | Tempo total da consulta, quando disponível. |
+| `errors` | `object` | Erros técnicos por dataset ou falha principal, quando ocorrerem. |
+
+## Campo `query`
+
+| Campo | Quando aparece |
+| --- | --- |
+| `taxid` | Consultas por CPF ou CNPJ. |
+| `plate` | Consultas veiculares. |
+| `datasets` | Sempre que datasets forem informados. |
+| `additional` | Quando campos adicionais foram enviados. |
+
+## Campo `summary`
+
+| Campo | Descrição |
+| --- | --- |
+| `datasets_total` | Quantidade total de datasets considerados. |
+| `datasets_queued` | Quantidade de datasets em fila. |
+| `datasets_processing` | Quantidade de datasets em processamento. |
+| `datasets_completed` | Quantidade de datasets concluídos. |
+| `datasets_failed` | Quantidade de datasets com falha. |
+
+## Exemplo com erro parcial
+
+```json
+{
+  "id": "evt_49f2fd47-098b-4d52-b435-3ce5a65e5831",
+  "event": "search.completed",
+  "scope": "search",
+  "created_at": "2026-06-23T12:01:00Z",
+  "data": {
+    "search_id": "9fcb573b-7f62-4774-978b-07e89dfef5f2",
+    "target": "person",
+    "status": "completed_with_errors",
+    "query": {
+      "taxid": "00000000000",
+      "datasets": ["person_basic_data", "person_example_dataset"]
+    },
+    "summary": {
+      "datasets_total": 2,
+      "datasets_queued": 0,
+      "datasets_processing": 0,
+      "datasets_completed": 1,
+      "datasets_failed": 1
+    },
+    "cost": {
+      "total": 0.05,
+      "refunded": 0.05
+    },
+    "errors": {
+      "person_example_dataset": {
+        "code": 42025,
+        "message": "Não foi possível consultar o provedor da consulta."
+      }
+    }
+  }
+}
+```
+
+## Como consumir
+
+1. Valide o header `X-LazyData-Webhook-Signature`.
+2. Use `id` para idempotência.
+3. Use `event` para rotear o tratamento.
+4. Use `data.search_id` para buscar o detalhe completo no histórico, quando necessário.
+5. Trate `search.completed` com `data.status` igual a `completed_with_errors` como conclusão com falha parcial.
+
+<Warning>
+  Não use o webhook como fonte única de verdade para dados completos de datasets. O payload é um resumo operacional; consulte o histórico da API quando precisar do retorno completo.
+</Warning>
+
+## Relacionado
+
+<Columns cols={2}>
+  <Card title="Resultado assíncrono" icon="clock" href="/api-reference/search/async-result">
+    Consulte o andamento e resultado de uma consulta assíncrona.
+  </Card>
+
+  <Card title="Histórico de consultas" icon="history" href="/search/history">
+    Entenda status, custos, estornos e erros por dataset.
+  </Card>
+</Columns>

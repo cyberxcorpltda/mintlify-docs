@@ -108,6 +108,18 @@
               },
               "search/history"
             ]
+          },
+          {
+            "group": "Webhook",
+            "icon": "webhook",
+            "pages": [
+              "webhook/overview",
+              "webhook/search",
+              "webhook/enrichment",
+              "webhook/validation",
+              "webhook/monitoring",
+              "webhook/storage"
+            ]
           }
         ],
         "icon": "file-alt"
